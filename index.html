@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Gloomjaw: Biome Adventure</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0f0a18">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Gloomjaw">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="/icons/icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@700;800&display=swap">
+</head>
+<body>
+  <canvas id="c" aria-label="Gloomjaw the dragon exploring the Void Jungle"></canvas>
+
+  <!-- touch layer: left half = joystick, right half = look around -->
+  <div id="touch"></div>
+  <div id="stickBase" class="stick"></div>
+  <div id="stickKnob" class="stick knob"></div>
+
+  <!-- game buttons (right thumb) -->
+  <div id="hud" class="hidden">
+    <button id="bPause" class="pill" aria-label="Pause">II</button>
+    <div id="fps" class="fps hidden"></div>
+    <button id="bUp" class="round fly-only" aria-label="Fly up">&#9650;<small>Up</small></button>
+    <button id="bDown" class="round fly-only" aria-label="Fly down">&#9660;<small>Down</small></button>
+    <button id="bFly" class="round big fly" aria-label="Fly"><span class="ico">&#129413;</span><small id="flyLabel">Fly</small></button>
+    <button id="bRoar" class="round roar" aria-label="Roar"><span class="ico">&#128226;</span><small>Roar</small></button>
+    <button id="bFire" class="round big fire" aria-label="Fire"><span class="ico">&#128293;</span><small>Fire</small></button>
+    <div id="toast" class="toast hidden"></div>
+  </div>
+
+  <!-- title -->
+  <div id="title" class="screen hidden">
+    <div class="logo">
+      <h1>Gloomjaw</h1>
+      <p>Biome Adventure</p>
+    </div>
+    <button id="bPlay" class="play">Play!</button>
+  </div>
+
+  <!-- pause -->
+  <div id="pause" class="screen dim hidden">
+    <div class="panel">
+      <h2>Paused</h2>
+      <button id="bResume" class="menu">Resume</button>
+      <button id="bSound" class="menu">Sound: on</button>
+      <button id="bRestart" class="menu">Start over</button>
+    </div>
+  </div>
+
+  <!-- rotate hint (CSS shows it in portrait) -->
+  <div id="rotate" class="screen solid">
+    <div class="phone"></div>
+    <h2>Turn your phone sideways</h2>
+    <p>Gloomjaw likes it wide!</p>
+  </div>
+
+  <!-- loading -->
+  <div id="loading" class="screen solid">
+    <div class="orb"></div>
+    <h2 id="loadText">Waking up Gloomjaw&hellip;</h2>
+    <div class="bar"><div id="loadBar"></div></div>
+    <small id="loadSub">Loading the 3D dragon</small>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

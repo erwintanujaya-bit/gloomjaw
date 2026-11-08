@@ -1,0 +1,11 @@
+node_modules
+dist
+desktop.ini
+.claude/settings.local.json
+
+# private / not needed by the game (keep out of the public repo)
+/*.jpg
+/*.png
+/*.glb
+/PROMPT.md
+assets/concept/
