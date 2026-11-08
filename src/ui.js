@@ -37,6 +37,14 @@ export function setFlying(flying) {
   $('flyLabel').textContent = flying ? 'Land' : 'Fly';
 }
 
+/** Rider button: highlighted while the rider is on Gloomjaw. Remembers the choice on this device. */
+export function setRiderButton(on, save = true) {
+  $('bRide').classList.toggle('on', on);
+  $('rideLabel').textContent = on ? 'Rider: on' : 'Rider';
+  if (save) store.set('rider', on ? '1' : '0');
+}
+export const savedRider = () => store.get('rider') === '1';
+
 let toastTimer = 0;
 export function toast(msg, ms = 5000) {
   const el = $('toast');

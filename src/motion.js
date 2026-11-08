@@ -16,6 +16,9 @@ export const TUNE = {
   vertSpeed: 4.5, minAlt: 2.4, maxAlt: 30,   // Up/Down button speed and height limits
   // turning (radians per second, top speed of the turn)
   turnWalk: 2.6, turnRun: 2.0, turnFly: 1.6, turnEase: 3.2,
+  // jump: how fast Gloomjaw leaves the ground (units/s), gravity, wind-up crouch (s)
+  jumpSpeed: 8, gravity: 15, jumpWind: 0.16,
+  sprintFly: 1.6,                            // Sprint button while flying = this many times faster
   // soft edge of the world
   edgeStart: 84, edgeHard: 97,
 };
@@ -31,7 +34,7 @@ export function dustAtFeet(n) { G.rig.legs.forEach(L => spawnDust(L.plant, n)); 
 
 export function resetMotion() {
   S.pos.set(0, 0, 0); S.heading = 0; S.mode = 'idle'; S.flying = false; S.fs = 'ground'; S.ft = 0;
-  S.speed = 0; S.turn = 0; S.turnRaw = 0; S.alt = 0; S.vy = 0; S.tgtAlt = TUNE.cruiseAlt;
+  S.sprintW = 0; S.speed = 0; S.turn = 0; S.turnRaw = 0; S.alt = 0; S.vy = 0; S.tgtAlt = TUNE.cruiseAlt;
   wasHolding = false; input.camYaw = 0;
   S.gyInit = false; S.roll = 0; S.pitch = 0; S.crouch = 0; S.bob = 0; S.glide = 0; S.flaps = 0;
   act.fire = -1; act.roar = -1;
@@ -39,6 +42,13 @@ export function resetMotion() {
 }
 
 export function toggleFly() { S.flying = !S.flying; }
+
+/** Jump button: on the ground it hops; tapped again in the air Gloomjaw flaps up into flight */
+export function jump() {
+  if (S.flying) return;
+  if (S.fs === 'ground' && S.alt < 0.3) { S.fs = 'jwind'; S.ft = 0; }
+  else if (S.fs === 'hop' || S.fs === 'jwind') S.flying = true;
+}
 
 function sampleGround(x, z, fx, fz) {
   const h = G.heightAt;
@@ -62,7 +72,8 @@ export function move(dt) {
   wasHolding = holding;
   const cy = holding ? stickFrame : input.camYaw, fxC = Math.sin(cy), fzC = Math.cos(cy);
   const wx = fxC * input.sy + -fzC * input.sx, wz = fzC * input.sy + fxC * input.sx;
-  const gait = fly ? { gait: 'fly', amount: input.mag } : stickToGait(input.mag, S.mode === 'run');
+  const gait = fly ? { gait: 'fly', amount: input.mag } : stickToGait(input.mag, input.sprint);
+  S.sprintW += ((input.sprint ? 1 : 0) - S.sprintW) * k(dt, 3);
   let want = (input.mag > 0.12 && gait.gait !== 'idle') ? Math.atan2(wx, wz) : null;
 
   // soft edge: Gloomjaw gently turns back toward the middle
@@ -107,6 +118,16 @@ export function move(dt) {
       else if (S.alt <= 0) { S.alt = 0; S.vy = 0; S.fs = 'touch'; S.ft = 0; burst(110, 0.9, 0.35); dustAtFeet(3); }
       break;
     case 'touch': S.ft += dt; if (S.ft > 0.6) S.fs = 'ground'; break;
+    case 'jwind':                                   // squat, then spring
+      S.ft += dt;
+      if (fly) { S.fs = 'crouch'; S.ft = 0; S.tgtAlt = Math.max(S.tgtAlt, TUNE.cruiseAlt); }
+      else if (S.ft > TUNE.jumpWind) { S.fs = 'hop'; S.vy = TUNE.jumpSpeed; burst(170, 0.7, 0.25); dustAtFeet(3); }
+      break;
+    case 'hop':                                     // simple arc; a second Jump tap becomes a takeoff
+      S.vy -= TUNE.gravity * dt; S.alt += S.vy * dt;
+      if (fly) { S.fs = 'climb'; S.vy = Math.max(S.vy, 3.5); S.tgtAlt = Math.max(S.tgtAlt, S.alt + 2.5, TUNE.cruiseAlt); }
+      else if (S.alt <= 0 && S.vy < 0) { S.alt = 0; S.vy = 0; S.fs = 'touch'; S.ft = 0.25; burst(110, 0.9, 0.35); dustAtFeet(4); }
+      break;
   }
   const inAir = air();
   const hov = S.fs === 'ground' && act.flap > 0;
@@ -127,8 +148,9 @@ export function move(dt) {
     if (m === 'walk') spT = TUNE.walkSpeed * gait.amount;
     else if (m === 'run') spT = lerp(TUNE.walkSpeed * 1.2, TUNE.runSpeed, gait.amount);
     spT *= 0.35 + 0.65 * Math.max(0, Math.cos(err));  // slow down while swinging around
-  } else if (S.fs === 'climb') spT = Math.max(3, lerp(TUNE.flySpeedMin, TUNE.flySpeedMax, input.mag));
-  else if (S.fs === 'cruise') spT = lerp(TUNE.flySpeedMin, TUNE.flySpeedMax, input.mag);
+  } else if (S.fs === 'jwind' || S.fs === 'hop') spT = S.speed;     // keep the run-up momentum through the jump
+  else if (S.fs === 'climb') spT = Math.max(3, lerp(TUNE.flySpeedMin, TUNE.flySpeedMax, input.mag)) * lerp(1, TUNE.sprintFly, S.sprintW);
+  else if (S.fs === 'cruise') spT = lerp(TUNE.flySpeedMin, TUNE.flySpeedMax, input.mag) * lerp(1, TUNE.sprintFly, S.sprintW);
   else if (S.fs === 'land') spT = S.alt < 1.4 ? 1.2 : Math.min(4, lerp(TUNE.flySpeedMin, TUNE.flySpeedMax, input.mag));
   S.speed += (spT - S.speed) * k(dt, S.fs === 'touch' ? 4 : 1.6);
   const fx = Math.sin(S.heading), fz = Math.cos(S.heading);
@@ -150,7 +172,7 @@ export function move(dt) {
   S.hz = lerp(TUNE.walkHz, TUNE.runHz, S.runW) * (0.45 + 0.55 * Math.min(1, S.speed / lerp(TUNE.walkSpeed, TUNE.runSpeed, S.runW)));
   if (stepping) S.gp += S.hz * dt;
   // crouch before takeoff and after landing
-  const crT = S.fs === 'crouch' ? 1 : S.fs === 'touch' ? Math.max(0, 1 - S.ft / 0.6) : 0;
+  const crT = S.fs === 'crouch' || S.fs === 'jwind' ? 1 : S.fs === 'touch' ? Math.max(0, 1 - S.ft / 0.6) : 0;
   S.crouch += (crT - S.crouch) * k(dt, S.fs === 'touch' && S.ft < 0.12 ? 25 : 6);
   // body bob: walk dips twice per cycle, run lifts when few feet are down (airborne phase)
   let bobT = 0;
@@ -159,7 +181,8 @@ export function move(dt) {
 
   /* ---- 6. wings ---- */
   let rate = 0.25, amp = 0.05, base = 0.08, sweep = 0;
-  if (S.fs === 'crouch') { base = 0.45; rate = 0.5; }
+  if (S.fs === 'crouch' || S.fs === 'jwind') { base = 0.45; rate = 0.5; }
+  else if (S.fs === 'hop') { rate = 1.5; amp = 0.65; base = 0.15; }
   else if (S.fs === 'climb') { rate = TUNE.climbHz; amp = 1; base = 0.1; }
   else if (S.fs === 'cruise') { rate = TUNE.cruiseHz; amp = S.glide > 0 ? 0 : 0.75; base = S.glide > 0 ? 0.16 : 0.1; }
   else if (S.fs === 'land') { if (S.alt < 1.6) { rate = 1.9; amp = 0.9; base = 0.2; sweep = -0.35; } else { rate = 1; amp = 0.15; base = 0.16; } }
@@ -189,6 +212,7 @@ export function move(dt) {
     const gA = 2 * Math.PI * S.gp;
     rollT = -S.turn * S.speed * 0.04 + S.step * (1 - S.runW) * 0.035 * Math.sin(gA) + Math.atan(g.side) * 0.5;
     pitchT = S.crouch * 0.07 + S.runW * S.step * 0.035 * Math.sin(gA) - Math.atan(g.slope) * 0.7;   // lean with the hill
+    if (S.fs === 'hop') pitchT -= Math.atan2(S.vy, Math.max(3, S.speed)) * 0.5;                    // nose up going up, down coming down
   }
   S.roll += (rollT - S.roll) * k(dt, 3);
   S.pitch += (pitchT - S.pitch) * k(dt, 3);

@@ -1,5 +1,14 @@
 # Changelog
 
+## Movement update
+- **Sprint:** hold the Sprint button to sprint (Shift on a keyboard). The stick now steers and sets walk speed;
+  sprinting in the air is 1.6x faster. `stickToGait(mag, sprint)` in `controls.js`.
+- **Jump:** tap Jump for a hop (squat, spring, landing thud). Tap Jump again in the air to flap up into flight.
+  Tuned in `TUNE` (`jumpSpeed`, `gravity`, `jumpWind`). Space = jump, V = fly/land, B = rider on a keyboard.
+- **Rider:** a small kid with a gold helmet and cape rides on Gloomjaw's back (`src/rider.js`). The Rider button
+  turns the rider on or off and remembers the choice. The rider leans with speed and turns, and the cape flutters.
+- **Closer camera:** chase distance 14/17/20 -> 9.5/12/14.5 (`CAM` in `camera.js`).
+
 ## Phase 1: controls + Void Jungle
 - Vite + three.js (npm) project, plain JS modules. `npm run dev` shows a LAN URL for phones.
 - Ported the prototype's rig, leg IK, gait/flight state machine, springy tail, fire, roar synth

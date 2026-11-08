@@ -3,9 +3,9 @@ import { G, S, act, input } from './state.js';
 
 /* CAM: tune the chase camera here */
 export const CAM = {
-  distWalk: 14, distRun: 17, distFly: 20,    // how far behind (world units)
-  pitchGround: 0.32, pitchFly: 0.2,          // how high above (radians)
-  lookHeight: 2.4,                           // aim a bit above Gloomjaw's middle
+  distWalk: 9.5, distRun: 12, distFly: 14.5, // how far behind (world units); smaller = closer
+  pitchGround: 0.3, pitchFly: 0.2,           // how high above (radians)
+  lookHeight: 2.2,                           // aim a bit above Gloomjaw's middle
   follow: 6,                                 // position follow speed
   idleReturn: 2.0,                           // seconds of no dragging before it swings back behind
   returnRate: 1.6,

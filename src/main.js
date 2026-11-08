@@ -4,7 +4,8 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { V, env } from './util.js';
 import { G, S, act, input, FIRE_DUR, ROAR_DUR } from './state.js';
 import { setupRig } from './rig.js';
-import { move, animateRig, resetMotion, toggleFly } from './motion.js';
+import { move, animateRig, resetMotion, toggleFly, jump } from './motion.js';
+import { initRider, setRider, riderOn, updateRider } from './rider.js';
 import { initEffects, updateEffects, emitFire, getMouth, setPointScale } from './effects.js';
 import { buildWorld, updateWorld, getFireLight } from './world.js';
 import { updateCamera, setTitleCamera, resetCamera } from './camera.js';
@@ -52,6 +53,8 @@ function setPaused(p) {
 const updateInput = initControls({
   touched: () => { /* any tap may wake audio */ },
   fly: () => { if (phase === 'playing' && !paused) { toggleFly(); ui.setFlying(S.flying); } },
+  jump: () => { if (phase === 'playing' && !paused) { jump(); ui.setFlying(S.flying); } },
+  ride: () => { if (phase === 'playing' && !paused) { const on = !riderOn(); setRider(on); ui.setRiderButton(on); } },
   fire: () => { if (phase === 'playing' && !paused && act.fire < 0) { act.fire = 0; sfxFire(); } },
   roar: () => { if (phase === 'playing' && !paused && act.roar < 0) { act.roar = 0; sfxRoar(); } },
   pause: () => setPaused(!paused),
@@ -101,6 +104,8 @@ new GLTFLoader().load(MODEL_URL, gltf => {
   G.model = model; G.inner = inner;
   model.updateMatrixWorld(true);
   G.rig = setupRig();
+  const rideSaved = ui.savedRider();
+  initRider(rideSaved); ui.setRiderButton(rideSaved, false);
   resetMotion();
   resize();
   setTitleCamera(true);
@@ -140,12 +145,13 @@ function frame() {
 function update(dt) {
   G.t += dt;
   if (phase === 'playing') updateInput();
-  else { input.mag = 0; input.sx = input.sy = 0; input.up = input.down = false; }
+  else { input.mag = 0; input.sx = input.sy = 0; input.up = input.down = input.sprint = false; }
   if (act.fire >= 0) { act.fire += dt; if (act.fire > FIRE_DUR) act.fire = -1; }
   if (act.roar >= 0) { act.roar += dt; if (act.roar > ROAR_DUR) act.roar = -1; }
   const fk = env(act.fire, FIRE_DUR, 0.3, 0.4), rk = env(act.roar, ROAR_DUR, 0.25, 0.5);
   move(dt);
   animateRig(fk, rk, dt);
+  updateRider(dt);
   updateCamera(dt);
   emitFire(dt, fk, act.fire, FIRE_DUR);
   if (fk > 0) { getMouth(_p, _d); fireLight.position.copy(_p); fireLight.intensity = fk * (60 + Math.random() * 25); }

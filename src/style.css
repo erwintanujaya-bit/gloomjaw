@@ -38,11 +38,18 @@ canvas#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block;
 .round.fly.active { background: radial-gradient(circle at 35% 30%, #ffe08a, #c98a10 80%); color: #2b1800; }
 /* layout of the right-hand cluster */
 #bFire { right: max(18px, calc(var(--sr) + 8px)); bottom: max(16px, calc(var(--sb) + 8px)); }
-#bRoar { right: calc(max(18px, calc(var(--sr) + 8px)) + 106px); bottom: max(16px, calc(var(--sb) + 8px)); }
+#bSprint { right: calc(max(18px, calc(var(--sr) + 8px)) + 106px); bottom: max(16px, calc(var(--sb) + 8px)); }
+#bRoar { right: calc(max(18px, calc(var(--sr) + 8px)) + 192px); bottom: max(16px, calc(var(--sb) + 8px)); width: 70px; height: 70px; }
+#bJump { right: calc(max(18px, calc(var(--sr) + 8px)) + 106px); bottom: calc(max(16px, calc(var(--sb) + 8px)) + 100px); }
+.round.sprint.down { background: radial-gradient(circle at 35% 30%, #ffe08a, #c98a10 80%); color: #2b1800; }
+.round.jump { background: radial-gradient(circle at 35% 30%, #7be0ff, #1e6ec0 75%); }
+.pill.rider { right: calc(max(14px, var(--sr)) + 62px); width: auto; padding: 0 12px; font: 400 17px var(--display); letter-spacing: .02em; display: flex; align-items: center; gap: 4px; }
+.pill.rider.on { background: var(--violet); color: var(--violet-ink); border-color: #e0c0ff; }
 #bFly { right: max(18px, calc(var(--sr) + 8px)); bottom: calc(max(16px, calc(var(--sb) + 8px)) + 108px); }
 #bUp { right: calc(max(18px, calc(var(--sr) + 8px)) + 106px); bottom: calc(max(16px, calc(var(--sb) + 8px)) + 176px); width: 68px; height: 68px; }
 #bDown { right: calc(max(18px, calc(var(--sr) + 8px)) + 106px); bottom: calc(max(16px, calc(var(--sb) + 8px)) + 98px); width: 68px; height: 68px; }
 body:not(.flying) .fly-only { display: none; }
+body.flying .ground-only { display: none; }
 
 .toast { position: absolute; left: 50%; top: max(12px, var(--st)); translate: -50% 0; background: rgba(15,10,24,.8); border: 2px solid var(--line); border-radius: 999px; padding: 8px 18px; font: 800 15px var(--body); pointer-events: none; text-align: center; max-width: 70vw; }
 

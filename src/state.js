@@ -15,7 +15,8 @@ export const G = {
 export const S = {
   mode: 'idle',          // idle | walk | run | fly   (what we are doing now)
   flying: false,         // player wants to be in the air (Fly button)
-  fs: 'ground',          // ground > crouch > climb > cruise > land > touch
+  fs: 'ground',          // ground > crouch > climb > cruise > land > touch;  jump: ground > jwind > hop > touch
+  sprintW: 0,            // 0..1, eased sprint amount (speed boost in the air)
   ft: 0, heading: 0, pos: new V(), speed: 0, turn: 0, turnRaw: 0,
   edge: 0,               // 0..1, how close to the edge of the world
   gy: 0, gyInit: false,  // terrain height under the body (smoothed)
@@ -30,5 +31,6 @@ export const act = { fire: -1, roar: -1, flap: 0 };
 export const input = {
   sx: 0, sy: 0, mag: 0,          // stick: sx right+, sy forward+, mag 0..1
   up: false, down: false,        // flight height
+  sprint: false,                 // Sprint button held (Shift on a keyboard)
   camYaw: 0,                     // direction the camera looks (set by camera.js)
 };

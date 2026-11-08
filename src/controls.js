@@ -2,21 +2,20 @@ import { input } from './state.js';
 import { orbitDrag } from './camera.js';
 
 /*
- * How far the stick is pushed (0..1) decides how Gloomjaw moves.
+ * The stick says WHERE to go and how hard you push; the Sprint button says walk or sprint.
  *   returns { gait: 'idle' | 'walk' | 'run', amount: 0..1 }
- * For 'walk', amount is the share of walking speed; for 'run', the share of the
+ * For 'walk', amount is the share of walking speed; for 'run' (sprinting), the share of the
  * range between a brisk trot and a full sprint.
  *
  * TODO(human): tune this feel. The version below is a plain starting point:
- * a small dead-zone, walk up to 60%, run beyond 75% (with a gap so it does not
- * flicker between walk and run when a thumb wobbles).
+ * a small dead-zone, walking speed reaches its top at 70% push, and a sprint reaches
+ * full speed at a 60% push (so a light thumb still sprints at full speed).
  */
-export function stickToGait(mag, wasRunning) {
-  const DEAD = 0.12, WALK_MAX = 0.6, RUN_ON = 0.75, RUN_OFF = 0.6;
+export function stickToGait(mag, sprint) {
+  const DEAD = 0.12, WALK_FULL = 0.7, SPRINT_FULL = 0.6;
   if (mag < DEAD) return { gait: 'idle', amount: 0 };
-  const runNow = wasRunning ? mag > RUN_OFF : mag > RUN_ON;
-  if (runNow) return { gait: 'run', amount: Math.min(1, (mag - RUN_OFF) / (1 - RUN_OFF)) };
-  return { gait: 'walk', amount: Math.min(1, (mag - DEAD) / (WALK_MAX - DEAD)) };
+  if (sprint) return { gait: 'run', amount: Math.min(1, (mag - DEAD) / (SPRINT_FULL - DEAD)) };
+  return { gait: 'walk', amount: Math.min(1, (mag - DEAD) / (WALK_FULL - DEAD)) };
 }
 
 const STICK_R = 62;           // pixels of thumb travel for a full push
@@ -27,7 +26,7 @@ export function initControls(hooks) {
   let stickId = null, camId = null, ox = 0, oy = 0, lx = 0, ly = 0;
   const touchStick = { sx: 0, sy: 0, mag: 0 };
   const keys = new Set();
-  const btn = { up: false, down: false };
+  const btn = { up: false, down: false, sprint: false };
 
   /* ----- joystick (left half) + camera drag (right half) ----- */
   layer.addEventListener('pointerdown', e => {
@@ -78,6 +77,9 @@ export function initControls(hooks) {
     el.addEventListener('contextmenu', e => e.preventDefault());
   };
   press('bFly', on => on && hooks.fly());
+  press('bJump', on => on && hooks.jump());
+  press('bSprint', on => { btn.sprint = on; }, true);
+  press('bRide', on => on && hooks.ride());
   press('bFire', on => on && hooks.fire());
   press('bRoar', on => on && hooks.roar());
   press('bUp', on => { btn.up = on; }, true);
@@ -90,7 +92,9 @@ export function initControls(hooks) {
     if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(c)) e.preventDefault();
     if (e.repeat) return;
     keys.add(c);
-    if (c === 'Space') hooks.fly();
+    if (c === 'Space') hooks.jump();
+    else if (c === 'KeyV') hooks.fly();
+    else if (c === 'KeyB') hooks.ride();
     else if (c === 'KeyF') hooks.fire();
     else if (c === 'KeyR') hooks.roar();
     else if (c === 'Escape' || c === 'KeyP') hooks.pause();
@@ -115,8 +119,9 @@ export function initControls(hooks) {
       const len = Math.hypot(x, y);
       if (len > 0) { x /= len; y /= len; }
       input.sx = x; input.sy = y;
-      input.mag = len > 0 ? (keys.has('ShiftLeft') || keys.has('ShiftRight') ? 1 : 0.45) : 0;
+      input.mag = len;
     }
+    input.sprint = btn.sprint || keys.has('ShiftLeft') || keys.has('ShiftRight');
     input.up = btn.up || keys.has('KeyE') || keys.has('PageUp');
     input.down = btn.down || keys.has('KeyQ') || keys.has('PageDown');
   };
