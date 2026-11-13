@@ -13,7 +13,7 @@ export const TUNE = {
   runSpeed: 6.8, runHz: 2.2, runDuty: 0.4, runLift: 0.55,
   // flying: flaps per second, flaps before a glide, glide length (s), starting height
   climbHz: 1.7, cruiseHz: 1.15, flapsBeforeGlide: 3, glideTime: 1.8, cruiseAlt: 4,
-  flySpeedMin: 1.4, flySpeedMax: 14,          // slowest / fastest flight (stick pushed 0 / 1)
+  flySpeedMin: 1.4, flySpeedMax: 22.5,          // slowest / fastest flight (stick pushed 0 / 1)
   vertSpeed: 4.5, minAlt: 2.4, maxAlt: 30,   // Up/Down button speed and height limits
   // turning (radians per second, top speed of the turn)
   turnWalk: 1.5, turnRun: 1.2, turnFly: 0.85, turnEase: 2.2,
@@ -21,7 +21,7 @@ export const TUNE = {
   jumpSpeed: 8, gravity: 15, jumpWind: 0.16,
   // racing feel: speed builds up (units/s per second) and falls away faster when you brake, and the sideways grip is limited,
   // so the faster you go the wider your turns get (turn rate = grip / speed, never more than the turn* numbers below)
-  accel: 5, brake: 14, gripAir: 7, gripGround: 8,
+  accel: 7.5, brake: 20, gripAir: 12, gripGround: 8,
   // running legs while flying: strides per second (slow glide, full speed), how far each leg swings,
   // how far forward the front legs reach / how far back the hind legs trail, and how much the knee folds on the way forward
   airStrideHz: [0.35, 0.8], airSwing: 0.55, airReachFront: 0.12, airReachBack: 0.28, airFold: 0.85,

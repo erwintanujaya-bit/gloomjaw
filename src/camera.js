@@ -3,7 +3,9 @@ import { G, S, act, input } from './state.js';
 
 /* CAM: tune the chase camera here */
 export const CAM = {
-  distWalk: 9.5, distRun: 12, distFly: 14.5, // how far behind (world units); smaller = closer
+  distClose: 6, distFar: 24,                 // how far behind (world units): very close when slow, pulls right back at top speed
+  speedFar: 45,                              // the speed at which the camera is fully pulled back
+  fovClose: 48, fovFar: 62,                  // field of view: widens with speed
   pitchGround: 0.3, pitchFly: 0.2,           // how high above (radians)
   lookHeight: 2.2,                           // aim a bit above Gloomjaw's middle
   follow: 6,                                 // position follow speed
@@ -53,11 +55,10 @@ export function updateCamera(dt) {
       cam.yaw += wrapA(S.heading + Math.PI - cam.yaw) * k(dt, input.mag > 0.12 ? CAM.followTurn : CAM.returnRate);
       cam.pitch += ((S.flying ? CAM.pitchFly : CAM.pitchGround) - cam.pitch) * k(dt, 1.2);
     }
-    const flyW = smoothstep(0.5, 3, S.alt);
-    const distT = lerp(lerp(CAM.distWalk, CAM.distRun, S.runW), CAM.distFly, flyW);
-    const sN = clamp((S.speed - 8) / 20, 0, 1);                       // 0 at a steady cruise, 1 flat out
-    cam.dist += (distT + 4 * sN - cam.dist) * k(dt, 1.5);              // pull back a little when fast...
-    const fovT = 48 + 9 * sN;                                          // ...and widen the view: speed lines without lines
+    // the faster you go, the further the camera pulls back and the wider the view (0 = standing still, 1 = flat out)
+    const sN = smoothstep(0, CAM.speedFar, S.speed);
+    cam.dist += (lerp(CAM.distClose, CAM.distFar, sN) - cam.dist) * k(dt, 2);
+    const fovT = lerp(CAM.fovClose, CAM.fovFar, sN);
     if (Math.abs(camera.fov - fovT) > 0.03) { camera.fov += (fovT - camera.fov) * k(dt, 3); camera.updateProjectionMatrix(); }
   }
 

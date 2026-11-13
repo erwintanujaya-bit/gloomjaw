@@ -1,5 +1,16 @@
 # Changelog
 
+## Close-up camera, faster dragon, one ring to start
+- **Camera:** very close when slow (6 units behind: the dragon and knight fill the screen), pulling smoothly back to about 24 at top speed
+  while the view widens from 48 to 62 degrees (`CAM` in `camera.js`: `distClose`, `distFar`, `speedFar`, `fovClose`, `fovFar`). It follows speed, not "flying or walking".
+- **Faster:** cruise 14 -> 22.5, Sprint boost 28 -> 45. Speed still builds up over about 3 s (`accel` 7.5, `brake` 20); the turn grip went up to
+  `gripAir` 12 so turning at speed stays a trade-off but not an impossibility (turn rate: 0.8 slow, 0.5 cruising, 0.25 flat out).
+- **A round now starts with ONE ring** about 60 units ahead and no arrow. Fly through it: the clock starts, the trail (6 rings, with
+  straights and sharp bends) appears and the guide arrow switches on. Rings are bigger (radius 8) and further apart (60 to 110).
+- Smoother streaming at top speed: only the ground tile you stand on is built instantly (the rest one per frame), and props are re-laid every
+  16 units instead of 8. Checked: 30 s at 45 u/s with a worst frame of 5 ms and no holes in the ground.
+- Autopilot check: braking for bends 16-18 rings, never boosting 14-16, holding boost and never braking 3.
+
 ## Racing feel + a ring trail that makes scores differ
 - **Faster:** flying cruise 9 -> 14, and holding Sprint now boosts to 28 (twice the old top speed of 14).
 - **Builds up like a car:** speed climbs about 5 per second while you boost (about 3 s from cruise to flat out) and falls about

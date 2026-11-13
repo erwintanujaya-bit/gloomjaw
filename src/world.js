@@ -23,7 +23,8 @@ const WORLD_BASE = { ...WORLD_TUNE };               // the defaults; each theme 
 
 const CHUNK = 64, STEP = 2, SEG = CHUNK / STEP, VN = SEG + 1, BN = VN + 2;   // tile size, vertex spacing, vertices per side (+1 border for smooth normals)
 const VIEW = 2;                                      // tiles kept around the player: (2*VIEW+1)^2 = 25
-const CELL = 8, REACH = 13;                          // props are laid in 8-unit squares out to 13 squares (104 units): as far as the old world, so phones draw the same amount
+const CELL = 8, REACH = 15;                          // props are laid in 8-unit squares out to 15 squares (120 units)...
+const LAY_STEP = 16;                                 // ...and laid again whenever the player has moved 16 units (so at top speed it is only a couple of times a second)
 
 const THEMES = {
   /* Gloomjaw's home: purple glowing mushrooms, twisted trees, glowing pools */
@@ -207,7 +208,7 @@ function updateChunks(px, pz, all = false) {
   for (let j = -VIEW; j <= VIEW; j++) for (let i = -VIEW; i <= VIEW; i++) if (!chunks.has(ckey(ccx + i, ccz + j))) want.push([ccx + i, ccz + j, Math.max(Math.abs(i), Math.abs(j)) * 10 + Math.abs(i) + Math.abs(j)]);
   want.sort((a, b) => a[2] - b[2]);
   for (const [cx, cz, pr] of want) {
-    if (pr < 20 || budget-- > 0) buildChunk(cx, cz);       // the 3x3 right around you is never late
+    if (pr < 10 || budget-- > 0) buildChunk(cx, cz);       // the tile you stand on is never late; the others come one per frame, nearest first
   }
   for (const c of [...chunks.values()]) if (Math.abs(c.cx - ccx) > VIEW + 1 || Math.abs(c.cz - ccz) > VIEW + 1) dropChunk(c);
 }
@@ -288,11 +289,11 @@ function buildPropMeshes() {
   [...P.trees, P.rocks, P.spikes, P.stems, P.caps1, P.caps2].forEach(m => { if (m) { m.frustumCulled = false; m.count = 0; add(m); } });
 }
 
-let lcx = 1e9, lcz = 1e9;
+let lcx = 1e9, lcz = 1e9, lpx = 1e9, lpz = 1e9;
 /** lay props in every 8-unit square within reach of the player; a square always grows the same things */
 function layProps(px, pz) {
   const ccx = Math.floor(px / CELL), ccz = Math.floor(pz / CELL);
-  lcx = ccx; lcz = ccz;
+  lcx = ccx; lcz = ccz; lpx = px; lpz = pz;
   const nt = [0, 0, 0]; let nr = 0, ns = 0, nm1 = 0, nm2 = 0, nms = 0;
   const near = new Set();                           // pools anywhere in the laid area
   for (let j = Math.floor((ccz - REACH) * CELL / CHUNK) - 1; j <= Math.floor((ccz + REACH) * CELL / CHUNK) + 1; j++)
@@ -447,7 +448,7 @@ export function buildWorld(sc, id = 'void') {
   }
   indexAttr = chunkIndex();
   G.heightAt = heightAt;
-  pcx = pcz = 1e9; lcx = lcz = 1e9;
+  pcx = pcz = 1e9; lcx = lcz = 1e9; lpx = lpz = 1e9;
   updateChunks(0, 0, true);                          // everything around the start, before the first frame
   buildSky();
   buildLights();
@@ -465,7 +466,7 @@ export function updateWorld(dt, camPos) {
   const jumped = Math.abs(Math.floor(px / CHUNK) - pcx) > 1 || Math.abs(Math.floor(pz / CHUNK) - pcz) > 1;
   updateChunks(px, pz, jumped && pcx !== 1e9);
   pcx = Math.floor(px / CHUNK); pcz = Math.floor(pz / CHUNK);
-  if (Math.floor(px / CELL) !== lcx || Math.floor(pz / CELL) !== lcz) layProps(px, pz);
+  if (Math.hypot(px - lpx, pz - lpz) >= LAY_STEP) layProps(px, pz);
   sun.position.set(px + 6, S.gy + 14, pz + 7);
   sun.target.position.set(px, S.gy, pz);
   sky.position.copy(camPos);

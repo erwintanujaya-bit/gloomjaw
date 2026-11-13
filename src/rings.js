@@ -3,16 +3,18 @@ import { V, canvasTex } from './util.js';
 import { G, S, input } from './state.js';
 
 /*
- * RING CHALLENGE: a winding trail of fire rings floats ahead of the dragon. Fly through the first one and a 60 second
- * clock starts; every ring you pass is +1 and a new ring appears at the far end of the trail. When time is up the game
- * asks main.js to show the score.   states: 'free' (waiting for the first ring) > 'run' > 'over'
+ * RING CHALLENGE: at the start there is ONE fire ring ahead of the dragon, and no arrow. Fly through it and the race
+ * begins: the 60 second clock starts, a winding trail of rings appears, and an arrow points at the next one. Every ring you
+ * pass is +1 and a new ring appears at the far end of the trail. When time is up main.js shows the score.
+ * states: 'free' (looking for the first ring) > 'run' > 'over'
  */
 
 /* RING: tune the challenge here (world units, seconds) */
 export const RING = {
-  radius: 6.5,           // how big the ring is (the dragon is about 7 long)
-  tube: 0.8,             // how thick the fire is
-  spacing: [34, 62],     // distance from one ring to the next (random in this range, so no two rounds match)
+  radius: 8,             // how big the ring is (the dragon is about 7 long)
+  tube: 1.0,             // how thick the fire is
+  firstDistance: 60,     // how far ahead the very first ring is
+  spacing: [60, 110],    // distance from one ring to the next (random in this range, so no two rounds match)
   gentle: 0.12,          // on a straight stretch the trail wanders only this much (radians, +/-)
   sharp: [0.6, 1.7],     // a sharp bend turns the trail by this much (radians): you have to slow down for it (the big ones are hairpins)
   straights: [2, 4],     // how many near-straight rings come after a sharp bend
@@ -69,12 +71,11 @@ function nextTurn() {
   return (Math.random() < 0.5 ? -1 : 1) * (RING.sharp[0] + Math.random() * (RING.sharp[1] - RING.sharp[0]));
 }
 
-/** put one more ring at the end of the trail */
-function addRing() {
+/** put one more ring at the end of the trail (gap and turn are chosen at random unless given) */
+function addRing(gap = RING.spacing[0] + Math.random() * (RING.spacing[1] - RING.spacing[0]), turn = nextTurn()) {
   const slot = takeSlot();
   if (!slot) return;
-  tail.hdg += nextTurn();
-  const gap = RING.spacing[0] + Math.random() * (RING.spacing[1] - RING.spacing[0]);
+  tail.hdg += turn;
   tail.pos.x += Math.sin(tail.hdg) * gap; tail.pos.z += Math.cos(tail.hdg) * gap;
   const y = G.heightAt(tail.pos.x, tail.pos.z) + RING.radius * RING.lowest + Math.random() * RING.wobble;
   const pos = new V(tail.pos.x, y, tail.pos.z), n = new V(Math.sin(tail.hdg), 0, Math.cos(tail.hdg));
@@ -90,8 +91,15 @@ function clearRings() {
   rings = []; dying = [];
 }
 
-/** lay a fresh trail starting just ahead of the dragon */
-function startTrail() {
+/** the start of a round: ONE ring straight ahead of the dragon */
+function layFirst() {
+  clearRings();
+  tail.pos.set(S.pos.x, 0, S.pos.z); tail.hdg = S.heading; tail.streak = 0;
+  addRing(RING.firstDistance, 0);
+}
+
+/** a whole trail of rings, starting from the dragon (used if you wander far away in the middle of a round) */
+function layTrail() {
   clearRings();
   tail.pos.set(S.pos.x, 0, S.pos.z); tail.hdg = S.heading; tail.streak = 2;       // the first rings are straight ahead
   while (rings.length < RING.ahead) addRing();
@@ -101,7 +109,7 @@ function startTrail() {
 export function resetRings() {
   if (!ready) return;
   game.state = 'free'; game.score = 0; game.time = RING.time;
-  startTrail();
+  layFirst();
   hooks.score && hooks.score(0); hooks.time && hooks.time(RING.time);
 }
 export function hideRings() { if (!ready) return; clearRings(); game.state = 'free'; if (embers) embers.visible = false; }
@@ -109,10 +117,13 @@ export function hideRings() { if (!ready) return; clearRings(); game.state = 'fr
 function collect(ring) {
   rings.splice(rings.indexOf(ring), 1);
   dying.push({ slot: ring.slot, t: 0 });
-  if (game.state === 'free') { game.state = 'run'; game.time = RING.time; hooks.start && hooks.start(); }
+  if (game.state === 'free') {                                       // the first ring: the race begins
+    game.state = 'run'; game.time = RING.time; hooks.start && hooks.start();
+    tail.pos.set(ring.pos.x, 0, ring.pos.z); tail.hdg = Math.atan2(ring.n.x, ring.n.z); tail.streak = 2;   // the trail carries on from here
+  }
   game.score++;
   hooks.score && hooks.score(game.score);
-  while (rings.length < RING.ahead) addRing();
+  while (rings.length < RING.ahead && (game.state === 'run')) addRing();
 }
 
 export function updateRings(dt) {
@@ -132,10 +143,12 @@ export function updateRings(dt) {
     }
     r.prevS = s;
   }
-  // wandered far from every ring: lay a new trail ahead
-  if (rings.length && rings.every(r => r.pos.distanceTo(_P) > 260)) startTrail();
-  // which way is the next ring? (a little arrow at the top of the screen, when it is not straight ahead)
-  if (hooks.arrow && rings[0]) {
+  // wandered far from every ring: lay new ones ahead of the dragon
+  if (rings.length && rings.every(r => r.pos.distanceTo(_P) > 300)) { if (game.state === 'run') layTrail(); else layFirst(); }
+  // which way is the next ring? A little arrow at the top of the screen, once the race has begun and when it is not straight ahead.
+  // (Before the first ring there is no arrow: you look for it yourself.)
+  if (hooks.arrow && game.state !== 'run') hooks.arrow(0, false);
+  else if (hooks.arrow && rings[0]) {
     const a = Math.atan2(rings[0].pos.x - _P.x, rings[0].pos.z - _P.z), rel = Math.atan2(Math.sin(a - input.camYaw), Math.cos(a - input.camYaw));
     hooks.arrow(-rel * 57.2958, Math.abs(rel) > 0.4);        // degrees, clockwise on screen; +rel = ring is to the left
   }
