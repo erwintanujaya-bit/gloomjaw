@@ -6,10 +6,10 @@ import { G, S, act, input, FIRE_DUR, ROAR_DUR } from './state.js';
 import { setupRig } from './rig.js';
 import { move, animateRig, resetMotion, toggleFly, jump, applyTune } from './motion.js';
 import { DRAGONS, DEFAULT_DRAGON } from './dragons.js';
-import { initRider, setRider, riderOn, updateRider } from './rider.js';
+import { initRider, setRider, riderOn, updateRider, loadKnight, detachRider, RIDER } from './rider.js';
 import { initEffects, updateEffects, emitFire, getMouth, setPointScale, setBreath, setAmbience } from './effects.js';
 import { buildWorld, updateWorld, getFireLight } from './world.js';
-import { updateCamera, setTitleCamera, resetCamera } from './camera.js';
+import { updateCamera, setTitleCamera, resetCamera, CAM } from './camera.js';
 import { initControls } from './controls.js';
 import { unlockAudio, sfxFire, sfxRoar, setVoice } from './audio.js';
 import * as ui from './ui.js';
@@ -103,6 +103,7 @@ function disposeModel(model) {
 }
 
 const loader = new GLTFLoader();
+const knightReady = loadKnight(import.meta.env.BASE_URL);    // the rider loads once, in parallel with the dragon
 let busy = false;
 
 /** load a dragon from dragons.js, swap it in, and give it its own numbers, colours and voice */
@@ -111,7 +112,7 @@ function loadDragon(id, first = false) {
   if (!cfg || busy) return;
   busy = true;
   ui.showLoading(`Waking up ${cfg.name}…`);
-  loader.load(import.meta.env.BASE_URL + cfg.model, gltf => {
+  loader.load(import.meta.env.BASE_URL + cfg.model, gltf => knightReady.then(() => {
     const inner = gltf.scene;
     const maxAniso = Math.min(4, renderer.capabilities.getMaxAnisotropy());
     G.glowMat = null;
@@ -131,6 +132,7 @@ function loadDragon(id, first = false) {
     model.add(inner);
     model.scale.setScalar(cfg.size / Math.max(size.x, size.y, size.z));     // longest side = cfg.size world units
     const rider = G.model ? riderOn() : ui.savedRider();
+    detachRider();                                  // the knight moves to the new dragon, so he must not be thrown away with the old one
     if (G.model) disposeModel(G.model);
     scene.add(model);
     if (cfg.world !== worldId) { worldId = cfg.world; setAmbience(buildWorld(scene, worldId)); }   // each dragon lives in its own biome
@@ -148,7 +150,7 @@ function loadDragon(id, first = false) {
     ui.showTitle(true); ui.showHud(false);
     ui.hideLoading();
     busy = false;
-  }, e => {
+  }).catch(err => { console.error(err); busy = false; ui.loadFailed(); }), e => {
     ui.setProgress(e.lengthComputable ? e.loaded / e.total : e.loaded / 4.8e6);
   }, err => { console.error(err); busy = false; ui.loadFailed(); });
 }
@@ -206,7 +208,7 @@ frame();
 // dev-only test handle: __gj.sim(seconds) fast-forwards the game in 1/60 s steps
 if (import.meta.env.DEV) {
   window.__gj = {
-    G, S, act, input, renderer, loadDragon,
+    G, S, act, input, renderer, loadDragon, RIDER, CAM,
     sim(sec) { if (phase === 'title') { ui.showTitle(false); ui.showHud(true); } phase = 'playing'; paused = false; for (let i = 0; i < sec * 60; i++) update(1 / 60); },
   };
 }

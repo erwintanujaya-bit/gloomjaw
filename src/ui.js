@@ -46,7 +46,7 @@ export function setFlying(flying) {
 /** Rider button: highlighted while the rider is on Gloomjaw. Remembers the choice on this device. */
 export function setRiderButton(on, save = true) {
   $('bRide').classList.toggle('on', on);
-  $('rideLabel').textContent = on ? 'Rider: on' : 'Rider';
+  $('rideLabel').textContent = on ? 'Knight: on' : 'Knight';
   if (save) store.set('rider', on ? '1' : '0');
 }
 export const savedRider = () => store.get('rider') === '1';

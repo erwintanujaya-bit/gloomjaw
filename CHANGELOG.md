@@ -1,5 +1,13 @@
 # Changelog
 
+## Knight rider
+- The rider is now the **Death Knight** (by Northcliffe, CC BY-NC 4.0, credited on the title screen and in `CREDITS.md`).
+  He is loaded once (`public/models/knight.glb`, 1.5 MB, shrunk from 4.4 MB with `tools/shrink_glb.py`), seated by code
+  with legs round the dragon's back, and holds his sword up. He moves to the new dragon when you switch.
+  The old little kid is only a fallback if the knight cannot load. The button is now called **Knight**.
+- Pose and size live in `RIDER` in `src/rider.js` (`height`, `pose`, `hipDrop`).
+- **Non-commercial:** this model's license forbids selling the game or adding ads while it is included.
+
 ## Lava Lands + calmer wings
 - **Biomes are themes** (`THEMES` in `src/world.js`): colours, light, fog, props and glow. Each dragon has a
   `world` in `dragons.js`; picking Emberclaw builds the **Lava Lands**, picking Gloomjaw the Void Jungle.

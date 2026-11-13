@@ -67,6 +67,7 @@ body.flying .ground-only { display: none; }
 #title { justify-content: flex-start; padding-top: max(22px, var(--st)); padding-bottom: max(22px, var(--sb)); background: linear-gradient(to bottom, rgba(10,5,20,.5), rgba(10,5,20,0) 45%, rgba(10,5,20,.35)); }
 .logo h1 { margin: 0; font: 400 clamp(56px, 15vh, 112px)/1 var(--display); letter-spacing: .01em; text-shadow: 0 0 28px rgba(181,107,255,.8), 0 5px 0 rgba(0,0,0,.55); }
 .logo p { font-size: clamp(16px, 3.4vh, 22px); letter-spacing: .28em; text-transform: uppercase; margin-top: 4px; color: #d9c0ff; }
+.credit { color: rgba(245,236,255,.55) !important; font-size: 11px !important; font-weight: 700; margin-top: -4px; }
 .picker { margin-top: auto; display: flex; gap: 12px; justify-content: center; }
 .pick { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 132px; padding: 8px 16px 10px; border-radius: 18px; border: 3px solid rgba(255,255,255,.22); background: rgba(15,10,24,.62); color: var(--fg); touch-action: manipulation; }
 .pick b { font: 400 22px var(--display); letter-spacing: .02em; }
