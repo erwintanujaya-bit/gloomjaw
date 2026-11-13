@@ -119,7 +119,7 @@ export function initControls(hooks) {
       const len = Math.hypot(x, y);
       if (len > 0) { x /= len; y /= len; }
       input.sx = x; input.sy = y;
-      input.mag = len;
+      input.mag = Math.min(1, len);           // two keys at once (a diagonal) must not count as more than a full push
     }
     input.sprint = btn.sprint || keys.has('ShiftLeft') || keys.has('ShiftRight');
     input.up = btn.up || keys.has('KeyE') || keys.has('PageUp');

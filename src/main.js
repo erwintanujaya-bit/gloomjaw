@@ -96,7 +96,8 @@ initRings(scene, {                  // the 60 second ring challenge (rings.js)
   start: () => { ui.rememberRing(); sfxGo(); ui.toast('Go! 60 seconds!', 1800); },
   score: n => { ui.setScore(n); if (n > 0) sfxRing(n); },
   time: t => ui.setTimer(t, ringGame.state === 'free'),
-  end: n => { sfxEnd(); paused = true; ui.showResult(true, n); },
+  arrow: (deg, show) => ui.setGuide(deg, show),
+  end: n => { sfxEnd(); paused = true; ui.setGuide(0, false); ui.showResult(true, n); },
 });
 const fireLight = getFireLight();
 ui.showFps(showFps);

@@ -86,6 +86,12 @@ export function setTimer(t, waiting = false) {
   box.classList.toggle('idle', waiting); box.classList.toggle('low', !waiting && t <= 10 && t > 0);
   if (sec !== lastSec) { lastSec = sec; $('scT').textContent = sec; }
 }
+/** the little arrow that points at the next ring */
+export function setGuide(deg, show) {
+  const g = $('guide');
+  g.style.transform = `rotate(${deg.toFixed(0)}deg)`;
+  g.classList.toggle('hidden', !show);
+}
 export const bestRings = () => parseInt(store.get('bestRings') || '0', 10) || 0;
 /** the score screen. Returns true when it is a new best. */
 export function showResult(on, n = 0) {

@@ -1,5 +1,17 @@
 # Changelog
 
+## Racing feel + a ring trail that makes scores differ
+- **Faster:** flying cruise 9 -> 14, and holding Sprint now boosts to 28 (twice the old top speed of 14).
+- **Builds up like a car:** speed climbs about 5 per second while you boost (about 3 s from cruise to flat out) and falls about
+  14 per second when you let go or pull the stick down (`accel`, `brake` in `TUNE`).
+- **The faster you go, the wider you turn:** turn rate = grip / speed (`gripAir` 7, `gripGround` 8), never more than the old
+  turn limits. Measured: 0.8 rad/s slow, 0.5 at cruise, 0.2 at flat out. The camera pulls back and widens its view as you speed up.
+- **Trail:** a few near-straight rings, then a sharp bend (some are hairpins), with random gaps of 34 to 62 (`RING` in `rings.js`).
+  Rings glow through the fog so you can see bends coming, and a little arrow at the top points to the next ring when it is not ahead.
+- Why scores were identical: they were capped by the old top speed on an always-gentle trail (an autopilot scored 29, 29, 29, 28, 29).
+  Now the same autopilot scores about 19 to 21 and varies, because bends cost time unless you brake in the right place.
+- Fixed: pressing two arrow keys at once counted as 1.41x a full stick push (keyboard only).
+
 ## Ring challenge (first game mechanic)
 - A winding trail of **fire rings** floats ahead of the dragon (5 at a time, in `src/rings.js`). Fly through the first one and a
   **60 second** clock starts; every ring is +1 and a new ring appears at the far end. When time is up a **score screen** shows

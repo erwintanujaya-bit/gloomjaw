@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { V, canvasTex } from './util.js';
-import { G, S } from './state.js';
+import { G, S, input } from './state.js';
 
 /*
  * RING CHALLENGE: a winding trail of fire rings floats ahead of the dragon. Fly through the first one and a 60 second
@@ -12,9 +12,11 @@ import { G, S } from './state.js';
 export const RING = {
   radius: 6.5,           // how big the ring is (the dragon is about 7 long)
   tube: 0.8,             // how thick the fire is
-  spacing: 34,           // distance from one ring to the next along the trail
-  turn: 0.5,             // how sharply the trail can bend between rings (radians, +/-)
-  ahead: 5,              // rings visible at once
+  spacing: [34, 62],     // distance from one ring to the next (random in this range, so no two rounds match)
+  gentle: 0.12,          // on a straight stretch the trail wanders only this much (radians, +/-)
+  sharp: [0.6, 1.7],     // a sharp bend turns the trail by this much (radians): you have to slow down for it (the big ones are hairpins)
+  straights: [2, 4],     // how many near-straight rings come after a sharp bend
+  ahead: 6,              // rings laid out at once (they glow through the fog, so you can see the next bends coming)
   time: 60,              // length of the challenge
   forgive: 1.1,          // how generous the hit test is (1.1 = the ring counts out to 110% of its radius)
   lowest: 0.85,          // ring centre is at least this many radii above the ground...
@@ -25,7 +27,7 @@ export const game = { state: 'free', score: 0, time: RING.time };
 
 const SLOTS = 8, EMBERS = 90;
 let scene = null, hooks = {}, slots = [], rings = [], dying = [], embers = null, emberData = [], ready = false;
-const tail = { pos: new V(), hdg: 0 };
+const tail = { pos: new V(), hdg: 0, streak: 0 };
 const _P = new V(), _d = new V(), _u = new V(), _v = new V(), _n = new V();
 
 /** call once, after the scene exists. hooks: { start(), score(n), time(sec), end(score) } */
@@ -35,8 +37,8 @@ export function initRings(sc, h) {
   const glowGeo = new THREE.TorusGeometry(RING.radius, RING.tube * 2.2, 6, 40);
   for (let i = 0; i < SLOTS; i++) {
     const g = new THREE.Group();
-    const core = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xff6a1a }));
-    const glow = new THREE.Mesh(glowGeo, new THREE.MeshBasicMaterial({ color: 0xff7a20, transparent: true, opacity: 0.28, blending: THREE.AdditiveBlending, depthWrite: false }));
+    const core = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xff6a1a, fog: false }));
+    const glow = new THREE.Mesh(glowGeo, new THREE.MeshBasicMaterial({ color: 0xff7a20, transparent: true, opacity: 0.28, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
     g.add(core, glow); g.visible = false; g.frustumCulled = false;
     scene.add(g);
     slots.push({ group: g, core, glow, used: false });
@@ -52,7 +54,7 @@ export function initRings(sc, h) {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  embers = new THREE.Points(g, new THREE.PointsMaterial({ map: tex, size: 2.4, sizeAttenuation: true, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+  embers = new THREE.Points(g, new THREE.PointsMaterial({ map: tex, size: 2.4, sizeAttenuation: true, vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
   embers.frustumCulled = false;
   scene.add(embers);
   ready = true;
@@ -60,12 +62,20 @@ export function initRings(sc, h) {
 
 const takeSlot = () => { const s = slots.find(x => !x.used); if (s) s.used = true; return s; };
 
+/** how much the trail turns at the next ring: a few near-straight rings, then a sharp bend, and so on */
+function nextTurn() {
+  if (tail.streak > 0) { tail.streak--; return (Math.random() * 2 - 1) * RING.gentle; }
+  tail.streak = RING.straights[0] + Math.floor(Math.random() * (RING.straights[1] - RING.straights[0] + 1));
+  return (Math.random() < 0.5 ? -1 : 1) * (RING.sharp[0] + Math.random() * (RING.sharp[1] - RING.sharp[0]));
+}
+
 /** put one more ring at the end of the trail */
 function addRing() {
   const slot = takeSlot();
   if (!slot) return;
-  tail.hdg += (Math.random() * 2 - 1) * RING.turn;
-  tail.pos.x += Math.sin(tail.hdg) * RING.spacing; tail.pos.z += Math.cos(tail.hdg) * RING.spacing;
+  tail.hdg += nextTurn();
+  const gap = RING.spacing[0] + Math.random() * (RING.spacing[1] - RING.spacing[0]);
+  tail.pos.x += Math.sin(tail.hdg) * gap; tail.pos.z += Math.cos(tail.hdg) * gap;
   const y = G.heightAt(tail.pos.x, tail.pos.z) + RING.radius * RING.lowest + Math.random() * RING.wobble;
   const pos = new V(tail.pos.x, y, tail.pos.z), n = new V(Math.sin(tail.hdg), 0, Math.cos(tail.hdg));
   slot.group.position.copy(pos); slot.group.lookAt(pos.x + n.x, pos.y, pos.z + n.z);     // the ring faces along the trail
@@ -83,7 +93,7 @@ function clearRings() {
 /** lay a fresh trail starting just ahead of the dragon */
 function startTrail() {
   clearRings();
-  tail.pos.set(S.pos.x, 0, S.pos.z); tail.hdg = S.heading;
+  tail.pos.set(S.pos.x, 0, S.pos.z); tail.hdg = S.heading; tail.streak = 2;       // the first rings are straight ahead
   while (rings.length < RING.ahead) addRing();
 }
 
@@ -123,7 +133,12 @@ export function updateRings(dt) {
     r.prevS = s;
   }
   // wandered far from every ring: lay a new trail ahead
-  if (rings.length && rings.every(r => r.pos.distanceTo(_P) > 170)) startTrail();
+  if (rings.length && rings.every(r => r.pos.distanceTo(_P) > 260)) startTrail();
+  // which way is the next ring? (a little arrow at the top of the screen, when it is not straight ahead)
+  if (hooks.arrow && rings[0]) {
+    const a = Math.atan2(rings[0].pos.x - _P.x, rings[0].pos.z - _P.z), rel = Math.atan2(Math.sin(a - input.camYaw), Math.cos(a - input.camYaw));
+    hooks.arrow(-rel * 57.2958, Math.abs(rel) > 0.4);        // degrees, clockwise on screen; +rel = ring is to the left
+  }
 
   // the clock
   if (game.state === 'run') {

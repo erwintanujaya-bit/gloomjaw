@@ -13,16 +13,19 @@ export const TUNE = {
   runSpeed: 6.8, runHz: 2.2, runDuty: 0.4, runLift: 0.55,
   // flying: flaps per second, flaps before a glide, glide length (s), starting height
   climbHz: 1.7, cruiseHz: 1.15, flapsBeforeGlide: 3, glideTime: 1.8, cruiseAlt: 4,
-  flySpeedMin: 1.4, flySpeedMax: 9,          // slowest / fastest flight (stick pushed 0 / 1)
+  flySpeedMin: 1.4, flySpeedMax: 14,          // slowest / fastest flight (stick pushed 0 / 1)
   vertSpeed: 4.5, minAlt: 2.4, maxAlt: 30,   // Up/Down button speed and height limits
   // turning (radians per second, top speed of the turn)
   turnWalk: 1.5, turnRun: 1.2, turnFly: 0.85, turnEase: 2.2,
   // jump: how fast Gloomjaw leaves the ground (units/s), gravity, wind-up crouch (s)
   jumpSpeed: 8, gravity: 15, jumpWind: 0.16,
+  // racing feel: speed builds up (units/s per second) and falls away faster when you brake, and the sideways grip is limited,
+  // so the faster you go the wider your turns get (turn rate = grip / speed, never more than the turn* numbers below)
+  accel: 5, brake: 14, gripAir: 7, gripGround: 8,
   // running legs while flying: strides per second (slow glide, full speed), how far each leg swings,
   // how far forward the front legs reach / how far back the hind legs trail, and how much the knee folds on the way forward
   airStrideHz: [0.35, 0.8], airSwing: 0.55, airReachFront: 0.12, airReachBack: 0.28, airFold: 0.85,
-  sprintFly: 1.6,                            // Sprint button while flying = this many times faster
+  sprintFly: 2.0,                            // Sprint button while flying = this many times faster
 };
 
 const TUNE_BASE = { ...TUNE };
@@ -136,7 +139,8 @@ export function move(dt) {
 
   /* ---- 3. steering and speed ---- */
   const err = want === null ? 0 : wrapA(want - S.heading);
-  const maxTurn = inAir ? TUNE.turnFly : m === 'run' ? TUNE.turnRun : TUNE.turnWalk;
+  const baseTurn = inAir ? TUNE.turnFly : m === 'run' ? TUNE.turnRun : TUNE.turnWalk;
+  const maxTurn = Math.min(baseTurn, (inAir ? TUNE.gripAir : TUNE.gripGround) / Math.max(S.speed, 1));   // fast = wide turns
   const canTurn = S.fs !== 'crouch' && S.fs !== 'touch';
   const turnT = (want !== null && canTurn) ? clamp(err * TUNE.turnEase, -maxTurn, maxTurn) : 0;
   S.turnRaw += (turnT - S.turnRaw) * k(dt, 8);       // smooth, no snapping
@@ -152,7 +156,8 @@ export function move(dt) {
   else if (S.fs === 'climb') spT = Math.max(3, lerp(TUNE.flySpeedMin, TUNE.flySpeedMax, flyAmt)) * lerp(1, TUNE.sprintFly, S.sprintW);
   else if (S.fs === 'cruise') spT = lerp(TUNE.flySpeedMin, TUNE.flySpeedMax, flyAmt) * lerp(1, TUNE.sprintFly, S.sprintW);
   else if (S.fs === 'land') spT = S.alt < 1.4 ? 1.2 : Math.min(4, lerp(TUNE.flySpeedMin, TUNE.flySpeedMax, flyAmt));
-  S.speed += (spT - S.speed) * k(dt, S.fs === 'touch' ? 4 : 1.6);
+  if (S.fs === 'climb' || S.fs === 'cruise') S.speed += clamp(spT - S.speed, -TUNE.brake * dt, TUNE.accel * dt);   // flying: builds up like a car, brakes quicker
+  else S.speed += (spT - S.speed) * k(dt, S.fs === 'touch' ? 4 : 1.6);
   const fx = Math.sin(S.heading), fz = Math.cos(S.heading);
   S.pos.x += fx * S.speed * dt; S.pos.z += fz * S.speed * dt;      // the world has no edge: it is built around you as you go
 

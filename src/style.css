@@ -100,6 +100,8 @@ body.flying .ground-only { display: none; }
 .sc.pop { animation: pop .35s ease-out; border-color: var(--gold); }
 .sc.low { color: #ff7a6a; border-color: #ff5a4a; animation: tick 1s ease-in-out infinite; }
 .sc.idle { opacity: .7; }
+.guide { position: absolute; left: 50%; top: calc(max(10px, var(--st)) + 54px); margin-left: -22px; pointer-events: none; filter: drop-shadow(0 0 8px rgba(255,150,40,.8)); transition: opacity .15s; }
+.guide.hidden { display: block !important; opacity: 0; }
 @keyframes pop { 40% { transform: scale(1.3); } }
 @keyframes tick { 50% { transform: scale(1.08); } }
 .panel.result { align-items: center; text-align: center; gap: 6px; }

@@ -15,7 +15,7 @@ export const CAM = {
 
 const cam = { yaw: Math.PI, pitch: 0.32, dist: 14, idle: 99, target: new V(), init: false, title: false, titleAng: 0 };
 
-export function resetCamera() { cam.init = false; cam.idle = 99; input.camYaw = S.heading; }
+export function resetCamera() { cam.init = false; cam.idle = 99; input.camYaw = S.heading; if (G.camera.fov !== 48) { G.camera.fov = 48; G.camera.updateProjectionMatrix(); } }
 export function setTitleCamera(on) { cam.title = on; cam.init = false; }
 
 /** drag on the right half of the screen */
@@ -39,7 +39,7 @@ export function updateCamera(dt) {
   const camera = G.camera, t = G.t;
   const want = _tgt.set(S.pos.x, S.gy + S.alt + CAM.lookHeight, S.pos.z);
   if (!cam.init) { cam.target.copy(want); cam.yaw = S.heading + Math.PI; cam.init = true; }
-  cam.target.lerp(want, k(dt, CAM.follow));
+  cam.target.lerp(want, k(dt, CAM.follow + 0.3 * S.speed));      // follows tighter the faster you go
 
   cam.idle += dt;
   if (cam.title) {
@@ -55,7 +55,10 @@ export function updateCamera(dt) {
     }
     const flyW = smoothstep(0.5, 3, S.alt);
     const distT = lerp(lerp(CAM.distWalk, CAM.distRun, S.runW), CAM.distFly, flyW);
-    cam.dist += (distT - cam.dist) * k(dt, 1.5);
+    const sN = clamp((S.speed - 8) / 20, 0, 1);                       // 0 at a steady cruise, 1 flat out
+    cam.dist += (distT + 4 * sN - cam.dist) * k(dt, 1.5);              // pull back a little when fast...
+    const fovT = 48 + 9 * sN;                                          // ...and widen the view: speed lines without lines
+    if (Math.abs(camera.fov - fovT) > 0.03) { camera.fov += (fovT - camera.fov) * k(dt, 3); camera.updateProjectionMatrix(); }
   }
 
   const cp = Math.cos(cam.pitch);
