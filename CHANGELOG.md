@@ -2,7 +2,7 @@
 
 ## Calmer turning and strides
 - Full-stick turning is about 40% slower (walk 1.5, sprint 1.2, flying 0.85 radians per second; `turnWalk`, `turnRun`, `turnFly`,
-  `turnEase` in `TUNE`): a wide, lazy circle instead of a spin. The flying stride is half as fast (`airStrideHz` 0.7 to 1.6).
+  `turnEase` in `TUNE`): a wide, lazy circle instead of a spin. The flying stride is half as fast (`airStrideHz` 0.35 to 0.8, slowed again after more testing).
 
 ## Running legs in flight
 - While flying (climbing or cruising) the legs no longer hang still: they run in a gallop, each leg pushing back to drive the
