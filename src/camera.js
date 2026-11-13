@@ -7,8 +7,9 @@ export const CAM = {
   pitchGround: 0.3, pitchFly: 0.2,           // how high above (radians)
   lookHeight: 2.2,                           // aim a bit above Gloomjaw's middle
   follow: 6,                                 // position follow speed
-  idleReturn: 2.0,                           // seconds of no dragging before it swings back behind
-  returnRate: 1.6,
+  idleReturn: 1.2,                           // seconds of no dragging before it swings back behind
+  returnRate: 1.6,                           // how fast it swings back when you are not steering
+  followTurn: 4.5,                           // how tightly it follows while steering (higher = stays more directly behind)
   shakeMax: 0.6,                             // roar shake in world units
 };
 
@@ -46,10 +47,10 @@ export function updateCamera(dt) {
     cam.yaw = S.heading + 0.5 + Math.sin(cam.titleAng) * 0.5;       // slow sway around the front
     cam.pitch += (0.2 - cam.pitch) * k(dt, 2); cam.dist += (15 - cam.dist) * k(dt, 2);
   } else {
-    // swing back behind the dragon only when nobody is steering: turning the picture while a thumb is on the stick
-    // makes "left" mean something different from one moment to the next
-    if (cam.idle > CAM.idleReturn && input.mag < 0.12) {
-      cam.yaw += wrapA(S.heading + Math.PI - cam.yaw) * k(dt, CAM.returnRate);
+    // stay behind the dragon: quickly while steering (so a turn shows as the world rolling past), gently otherwise.
+    // After you drag the view yourself it waits a moment before swinging back.
+    if (cam.idle > CAM.idleReturn) {
+      cam.yaw += wrapA(S.heading + Math.PI - cam.yaw) * k(dt, input.mag > 0.12 ? CAM.followTurn : CAM.returnRate);
       cam.pitch += ((S.flying ? CAM.pitchFly : CAM.pitchGround) - cam.pitch) * k(dt, 1.2);
     }
     const flyW = smoothstep(0.5, 3, S.alt);

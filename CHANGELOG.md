@@ -6,9 +6,9 @@
   same thing. Nothing is stored for the whole world. Tested: a 600-unit run, steady memory, slowest frame 3.5 ms.
   Ground height now matches the drawn triangles exactly, and the lighting is smooth across tile borders.
 - **Stick fixed.** The world edge used to steer the dragon back toward the middle (it looked like "right turns left"),
-  and the camera swung round behind it while a thumb was still on the stick. Now left stays screen-left for as long as you
-  hold it, and the camera only swings back when you let go (`camera.js`). Checked: left, right, up and down move the
-  dragon to the matching side of the screen.
+  and the stick was tied to where the camera pointed while the camera swung around. Now the stick steers relative to the
+  dragon: up = keep going, left = turn left, right = turn right. Hold left and it keeps turning in a circle, and the chase
+  camera stays close behind (`followTurn` in `camera.js`) so the world rolls past. Turn speeds are in `TUNE` (`turnWalk`, `turnRun`, `turnFly`).
 
 ## Knight rider
 - The rider is now the **Death Knight** (by Northcliffe, CC BY-NC 4.0, credited on the title screen and in `CREDITS.md`).

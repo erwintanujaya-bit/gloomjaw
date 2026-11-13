@@ -65,10 +65,10 @@ export function move(dt) {
   const h = G.heightAt;
 
   /* ---- 1. what is the player asking for? ---- */
-  // The stick is relative to the camera, like in Roblox: up = away from the camera, left = screen-left.
-  // The camera never swings round while a thumb is on the stick (see camera.js), so holding left keeps
-  // going left instead of the picture rotating under your thumb.
-  const cy = input.camYaw, fxC = Math.sin(cy), fzC = Math.cos(cy);
+  // The stick steers relative to the dragon: up = keep going, left = turn left, right = turn right. Hold left and
+  // it keeps turning (a circle), while the chase camera swings round behind it so the world rolls past.
+  // Using the dragon's own heading (not the camera's) means the camera can never fight the steering.
+  const cy = S.heading, fxC = Math.sin(cy), fzC = Math.cos(cy);
   const wx = fxC * input.sy + -fzC * input.sx, wz = fzC * input.sy + fxC * input.sx;
   const gait = fly ? { gait: 'fly', amount: input.mag } : stickToGait(input.mag, input.sprint);
   S.sprintW += ((input.sprint ? 1 : 0) - S.sprintW) * k(dt, 3);
