@@ -2,6 +2,7 @@ import json,struct,io,sys
 import numpy as np
 from PIL import Image
 src,dst=sys.argv[1],sys.argv[2]
+GLOW=sys.argv[3] if len(sys.argv)>3 else 'purple'   # which colour glows: purple (Gloomjaw) or orange (lava dragons)
 b=open(src,'rb').read();l=struct.unpack('<I',b[12:16])[0];j=json.loads(b[20:20+l])
 bo=20+l;bl=struct.unpack('<I',b[bo:bo+4])[0];BIN=b[bo+8:bo+8+bl]
 views=[BIN[v.get('byteOffset',0):v.get('byteOffset',0)+v['byteLength']] for v in j['bufferViews']]
@@ -15,7 +16,8 @@ new={ti(pbr['baseColorTexture']):jpg(base,86),ti(mat['normalTexture']):jpg(img(t
 # emissive: bright saturated purple/magenta pixels
 a=np.asarray(base.resize((S,S),Image.LANCZOS)).astype(np.float32)/255
 r,g,bb=a[...,0],a[...,1],a[...,2];mx=a.max(-1);mn=a.min(-1);sat=(mx-mn)/(mx+1e-5)
-mask=np.clip((sat-0.45)/0.25,0,1)*np.clip((mx-0.38)/0.25,0,1)*(bb>g*1.2)
+if GLOW=='orange': mask=np.clip((sat-0.5)/0.25,0,1)*np.clip((mx-0.5)/0.25,0,1)*(r>g*1.25)
+else: mask=np.clip((sat-0.45)/0.25,0,1)*np.clip((mx-0.38)/0.25,0,1)*(bb>g*1.2)
 em=(a*mask[...,None]*1.15).clip(0,1)
 print('glow coverage %.1f%%'%(100*(mask>0.3).mean()))
 buf=io.BytesIO();Image.fromarray((em*255).astype(np.uint8)).save(buf,'JPEG',quality=85);

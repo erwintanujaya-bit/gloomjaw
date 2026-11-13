@@ -107,9 +107,12 @@ function roarVoice(a, t0, d, f0, fPeak, fEnd, vol, peakAt) {
   out.connect(a.destination);
 }
 
+let voicePitch = 1;                      // each dragon has its own roar pitch (dragons.js)
+export function setVoice(p) { voicePitch = p; }
+
 export function sfxRoar() {
   const a = audio(); if (!a) return;
-  const t0 = a.currentTime;
-  roarVoice(a, t0, 1.9, 95, 175, 62, 0.42, 0.3);
-  [2.0, 2.38, 2.72].forEach((s, i) => roarVoice(a, t0 + s, 0.32, 85 - i * 6, 105 - i * 8, 60, 0.28 - i * 0.06, 0.25));
+  const t0 = a.currentTime, p = voicePitch;
+  roarVoice(a, t0, 1.9, 95 * p, 175 * p, 62 * p, 0.42, 0.3);
+  [2.0, 2.38, 2.72].forEach((s, i) => roarVoice(a, t0 + s, 0.32, (85 - i * 6) * p, (105 - i * 8) * p, 60 * p, 0.28 - i * 0.06, 0.25));
 }

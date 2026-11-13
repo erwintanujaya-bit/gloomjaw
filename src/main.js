@@ -4,13 +4,14 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { V, env } from './util.js';
 import { G, S, act, input, FIRE_DUR, ROAR_DUR } from './state.js';
 import { setupRig } from './rig.js';
-import { move, animateRig, resetMotion, toggleFly, jump } from './motion.js';
+import { move, animateRig, resetMotion, toggleFly, jump, applyTune } from './motion.js';
+import { DRAGONS, DEFAULT_DRAGON } from './dragons.js';
 import { initRider, setRider, riderOn, updateRider } from './rider.js';
-import { initEffects, updateEffects, emitFire, getMouth, setPointScale } from './effects.js';
+import { initEffects, updateEffects, emitFire, getMouth, setPointScale, setBreath } from './effects.js';
 import { buildWorld, updateWorld, getFireLight } from './world.js';
 import { updateCamera, setTitleCamera, resetCamera } from './camera.js';
 import { initControls } from './controls.js';
-import { unlockAudio, sfxFire, sfxRoar } from './audio.js';
+import { unlockAudio, sfxFire, sfxRoar, setVoice } from './audio.js';
 import * as ui from './ui.js';
 
 const canvas = document.getElementById('c');
@@ -70,6 +71,12 @@ ui.initMenus({
     ui.maybeSoundHint();
   },
   resume: () => setPaused(false),
+  change: () => {                   // back to the title screen to pick a dragon
+    if (phase !== 'playing') return;
+    paused = false; ui.showPause(false); ui.showHud(false);
+    resetMotion(); resetCamera(); setTitleCamera(true);
+    phase = 'title'; ui.showTitle(true);
+  },
   restart: () => {
     resetMotion(); resetCamera(); ui.setFlying(false); setPaused(false);
   },
@@ -81,40 +88,71 @@ initEffects();
 const fireLight = getFireLight();
 ui.showFps(showFps);
 
-const MODEL_URL = import.meta.env.BASE_URL + 'models/gloomjaw.glb';
-new GLTFLoader().load(MODEL_URL, gltf => {
-  const inner = gltf.scene;
-  const maxAniso = Math.min(4, renderer.capabilities.getMaxAnisotropy());
-  inner.traverse(o => {
+/** free the GPU memory of the dragon we are replacing (matters on a phone) */
+function disposeModel(model) {
+  scene.remove(model);
+  model.traverse(o => {
     if (!o.isMesh) return;
-    o.castShadow = true; o.receiveShadow = false; o.frustumCulled = false;
+    o.geometry.dispose();
     const m = o.material;
-    if (m) {
-      for (const key of ['map', 'normalMap', 'emissiveMap', 'metalnessMap']) if (m[key]) m[key].anisotropy = maxAniso;
-      if (m.emissiveMap) G.glowMat = m;
-    }
+    if (m) { for (const key of ['map', 'normalMap', 'emissiveMap', 'metalnessMap', 'roughnessMap']) if (m[key]) m[key].dispose(); m.dispose(); }
   });
-  const box = new THREE.Box3().setFromObject(inner), size = box.getSize(new V()), c = box.getCenter(new V());
-  inner.position.set(-c.x, -box.min.y, -c.z);
-  const model = new THREE.Group();
-  model.rotation.order = 'YXZ';
-  model.add(inner);
-  model.scale.setScalar(7 / Math.max(size.x, size.y, size.z));     // largest dimension = 7 world units
-  scene.add(model);
-  G.model = model; G.inner = inner;
-  model.updateMatrixWorld(true);
-  G.rig = setupRig();
-  const rideSaved = ui.savedRider();
-  initRider(rideSaved); ui.setRiderButton(rideSaved, false);
-  resetMotion();
-  resize();
-  setTitleCamera(true);
-  phase = 'title';
-  ui.showTitle(true);
-  ui.hideLoading();
-}, e => {
-  ui.setProgress(e.lengthComputable ? e.loaded / e.total : e.loaded / 4.5e6);
-}, err => { console.error(err); ui.loadFailed(); });
+}
+
+const loader = new GLTFLoader();
+let busy = false;
+
+/** load a dragon from dragons.js, swap it in, and give it its own numbers, colours and voice */
+function loadDragon(id, first = false) {
+  const cfg = DRAGONS[id];
+  if (!cfg || busy) return;
+  busy = true;
+  ui.showLoading(`Waking up ${cfg.name}…`);
+  loader.load(import.meta.env.BASE_URL + cfg.model, gltf => {
+    const inner = gltf.scene;
+    const maxAniso = Math.min(4, renderer.capabilities.getMaxAnisotropy());
+    G.glowMat = null;
+    inner.traverse(o => {
+      if (!o.isMesh) return;
+      o.castShadow = true; o.receiveShadow = false; o.frustumCulled = false;
+      const m = o.material;
+      if (m) {
+        for (const key of ['map', 'normalMap', 'emissiveMap', 'metalnessMap']) if (m[key]) m[key].anisotropy = maxAniso;
+        if (m.emissiveMap) G.glowMat = m;
+      }
+    });
+    const box = new THREE.Box3().setFromObject(inner), size = box.getSize(new V()), c = box.getCenter(new V());
+    inner.position.set(-c.x, -box.min.y, -c.z);
+    const model = new THREE.Group();
+    model.rotation.order = 'YXZ';
+    model.add(inner);
+    model.scale.setScalar(cfg.size / Math.max(size.x, size.y, size.z));     // longest side = cfg.size world units
+    const rider = G.model ? riderOn() : ui.savedRider();
+    if (G.model) disposeModel(G.model);
+    scene.add(model);
+    G.model = model; G.inner = inner; G.dragon = cfg;
+    model.updateMatrixWorld(true);
+    G.rig = setupRig(cfg.bones);
+    applyTune(cfg.tune); setBreath(cfg.breath); setVoice(cfg.voice);
+    fireLight.color.set(cfg.breath.light);
+    initRider(rider, cfg.rider); ui.setRiderButton(rider, false);
+    resetMotion();
+    resize();
+    setTitleCamera(true);
+    currentId = id; ui.setPicked(id); ui.saveDragon(id);
+    phase = 'title';
+    ui.showTitle(true); ui.showHud(false);
+    ui.hideLoading();
+    busy = false;
+  }, e => {
+    ui.setProgress(e.lengthComputable ? e.loaded / e.total : e.loaded / 4.8e6);
+  }, err => { console.error(err); busy = false; ui.loadFailed(); });
+}
+
+const savedDragon = ui.savedDragon();
+let currentId = null;
+ui.buildPicker(DRAGONS, id => { if (id !== currentId && phase === 'title') loadDragon(id); });
+loadDragon(DRAGONS[savedDragon] ? savedDragon : DEFAULT_DRAGON, true);
 
 /* ---------- main loop ---------- */
 const clock = new THREE.Clock();
@@ -165,7 +203,7 @@ frame();
 // dev-only test handle: __gj.sim(seconds) fast-forwards the game in 1/60 s steps
 if (import.meta.env.DEV) {
   window.__gj = {
-    G, S, act, input, renderer,
+    G, S, act, input, renderer, loadDragon,
     sim(sec) { if (phase === 'title') { ui.showTitle(false); ui.showHud(true); } phase = 'playing'; paused = false; for (let i = 0; i < sec * 60; i++) update(1 / 60); },
   };
 }

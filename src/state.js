@@ -7,6 +7,7 @@ export const ROAR_DUR = 3.2;      // main roar 1.9 s + three grunts
 export const G = {
   model: null, inner: null, rig: null, glowMat: null,
   scene: null, camera: null,
+  dragon: null,                    // the chosen dragon's entry from dragons.js
   t: 0,
   heightAt: () => 0,               // replaced by world.js
 };
@@ -16,7 +17,8 @@ export const S = {
   mode: 'idle',          // idle | walk | run | fly   (what we are doing now)
   flying: false,         // player wants to be in the air (Fly button)
   fs: 'ground',          // ground > crouch > climb > cruise > land > touch;  jump: ground > jwind > hop > touch
-  sprintW: 0,            // 0..1, eased sprint amount (speed boost in the air)
+  foldW: 1,              // 0..1, wings tucked in on the ground (see wing.fold in dragons.js)
+  sprintW: 0,          // 0..1, eased sprint amount (speed boost in the air)
   ft: 0, heading: 0, pos: new V(), speed: 0, turn: 0, turnRaw: 0,
   edge: 0,               // 0..1, how close to the edge of the world
   gy: 0, gyInit: false,  // terrain height under the body (smoothed)

@@ -48,22 +48,23 @@ function buildKid() {
 }
 
 /** put the rider on Gloomjaw's back (after the rig exists). It follows the spine bone from then on. */
-export function initRider(visible) {
+export function initRider(visible, seat = {}) {
   const inner = G.inner, bone = G.rig.chest.b;
+  const fwd = seat.forward ?? RIDER.seatForward, size = seat.scale ?? RIDER.scale;
   root = buildKid();
   inner.updateMatrixWorld(true);
   // find the top of the back right above the chest bone
   const pw = bone.getWorldPosition(new V());
   const meshes = []; inner.traverse(o => { if (o.isMesh) meshes.push(o); });
-  const hit = new THREE.Raycaster(new V(pw.x, pw.y + 30, pw.z + RIDER.seatForward), new V(0, -1, 0)).intersectObjects(meshes, false)[0];
-  const seat = hit ? hit.point.clone() : pw.clone().add(new V(0, 1, 0));
-  seat.y -= RIDER.seatSink;
-  seat.z += RIDER.seatForward;
+  const hit = new THREE.Raycaster(new V(pw.x, pw.y + 30, pw.z + fwd), new V(0, -1, 0)).intersectObjects(meshes, false)[0];
+  const spot = hit ? hit.point.clone() : pw.clone().add(new V(0, 1, 0));
+  spot.y -= RIDER.seatSink;
+  spot.z += fwd;
   // express that spot in the bone's own space, and cancel the bone's rotation/scale so the rider stands upright at 1:1
   const ws = bone.getWorldScale(new V()).x;
-  root.position.copy(bone.worldToLocal(seat));
+  root.position.copy(bone.worldToLocal(spot));
   root.quaternion.copy(bone.getWorldQuaternion(new THREE.Quaternion()).invert());
-  root.scale.setScalar(RIDER.scale / ws);
+  root.scale.setScalar(size / ws);
   bone.add(root);
   root.visible = !!visible;
   return root;

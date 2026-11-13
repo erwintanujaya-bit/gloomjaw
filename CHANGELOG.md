@@ -1,5 +1,15 @@
 # Changelog
 
+## Second dragon: Emberclaw
+- **Dragons are data now** (`src/dragons.js`): each dragon has its model, bone map, size, breath colours, roar pitch,
+  wing tweaks and rider seat. `setupRig(bones)` reads the bone map instead of hard-coded names.
+- **Emberclaw** (lava dragon, from Asher's Meshy model): orange fire, higher roar, wings tucked up on the ground
+  and flapping lower in the air. No jaw bone, so the head bows into the breath. `public/models/emberclaw.glb` (4.9 MB, was 17 MB).
+- **Dragon picker** on the title screen (remembers the choice) and a **Change dragon** button in the pause menu.
+  Only the chosen dragon's model downloads. The old model's GPU memory is freed when you switch.
+- `tools/repack_glb.py in.glb out.glb orange` makes the glow map for lava dragons (default is purple).
+  `tools/inspect_bones.py model.glb` prints a skeleton so bones can be matched to body parts.
+
 ## Movement update
 - **Sprint:** hold the Sprint button to sprint (Shift on a keyboard). The stick now steers and sets walk speed;
   sprinting in the air is 1.6x faster. `stickToGait(mag, sprint)` in `controls.js`.

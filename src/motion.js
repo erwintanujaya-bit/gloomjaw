@@ -4,6 +4,7 @@ import { pose, legIK } from './rig.js';
 import { burst } from './audio.js';
 import { spawnDust } from './effects.js';
 import { stickToGait } from './controls.js';
+import { riderOn } from './rider.js';
 
 /* TUNE: change these numbers to adjust how Gloomjaw moves */
 export const TUNE = {
@@ -23,6 +24,10 @@ export const TUNE = {
   edgeStart: 84, edgeHard: 97,
 };
 
+const TUNE_BASE = { ...TUNE };
+/** switch to a dragon's own numbers: the defaults above plus that dragon's `tune` overrides */
+export function applyTune(overrides = {}) { Object.assign(TUNE, TUNE_BASE, overrides); }
+
 const air = () => S.fs === 'climb' || S.fs === 'cruise' || S.fs === 'land';
 
 // wing beat: fast power downstroke (40%), slower recovery upstroke (60%). +1 = up, -1 = down
@@ -34,7 +39,7 @@ export function dustAtFeet(n) { G.rig.legs.forEach(L => spawnDust(L.plant, n)); 
 
 export function resetMotion() {
   S.pos.set(0, 0, 0); S.heading = 0; S.mode = 'idle'; S.flying = false; S.fs = 'ground'; S.ft = 0;
-  S.sprintW = 0; S.speed = 0; S.turn = 0; S.turnRaw = 0; S.alt = 0; S.vy = 0; S.tgtAlt = TUNE.cruiseAlt;
+  S.sprintW = 0; S.foldW = 1; S.speed = 0; S.turn = 0; S.turnRaw = 0; S.alt = 0; S.vy = 0; S.tgtAlt = TUNE.cruiseAlt;
   wasHolding = false; input.camYaw = 0;
   S.gyInit = false; S.roll = 0; S.pitch = 0; S.crouch = 0; S.bob = 0; S.glide = 0; S.flaps = 0;
   act.fire = -1; act.roar = -1;
@@ -74,6 +79,7 @@ export function move(dt) {
   const wx = fxC * input.sy + -fzC * input.sx, wz = fzC * input.sy + fxC * input.sx;
   const gait = fly ? { gait: 'fly', amount: input.mag } : stickToGait(input.mag, input.sprint);
   S.sprintW += ((input.sprint ? 1 : 0) - S.sprintW) * k(dt, 3);
+  S.foldW += ((S.fs === 'ground' || S.fs === 'touch' ? 1 : 0) - S.foldW) * k(dt, 3);   // wings tuck in while on the ground
   let want = (input.mag > 0.12 && gait.gait !== 'idle') ? Math.atan2(wx, wz) : null;
 
   // soft edge: Gloomjaw gently turns back toward the middle
@@ -269,7 +275,8 @@ export function animateRig(fk, rk, dt) {
 
   // wings: power downstroke, wrist folds on the upstroke, still while gliding
   const v = wingCurve(S.wp), fold = (S.wp >= 0.4 ? Math.sin(Math.PI * (S.wp - 0.4) / 0.6) : 0) * S.amp;
-  const tip = 0.04 * Math.sin(t * 2.3) * (S.glide > 0 ? 1 : 0.3), a = S.base + S.amp * v;
+  const W = G.dragon ? G.dragon.wing : { offset: 0, scale: 1, fold: 0 };
+  const tip = 0.04 * Math.sin(t * 2.3) * (S.glide > 0 ? 1 : 0.3), a = W.offset + W.fold * (riderOn() ? W.riderFold ?? 1 : 1) * S.foldW + S.base + S.amp * v * W.scale;
   [[r.wr, 1, r.frF], [r.wl, -1, r.flF]].forEach(([w, s, fingers], j) => {
     pose(w[0], 0, s * S.sweep * 0.5, s * a);
     pose(w[1], 0, 0, s * S.amp * 0.18 * v);

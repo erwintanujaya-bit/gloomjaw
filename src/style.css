@@ -64,9 +64,15 @@ body.flying .ground-only { display: none; }
 .screen p { margin: 0; color: var(--muted); font-weight: 800; font-size: 18px; }
 .screen small { color: var(--muted); font-weight: 700; font-size: 14px; }
 
-#title { justify-content: space-between; padding-top: max(22px, var(--st)); padding-bottom: max(22px, var(--sb)); background: linear-gradient(to bottom, rgba(10,5,20,.5), rgba(10,5,20,0) 45%, rgba(10,5,20,.35)); }
+#title { justify-content: flex-start; padding-top: max(22px, var(--st)); padding-bottom: max(22px, var(--sb)); background: linear-gradient(to bottom, rgba(10,5,20,.5), rgba(10,5,20,0) 45%, rgba(10,5,20,.35)); }
 .logo h1 { margin: 0; font: 400 clamp(56px, 15vh, 112px)/1 var(--display); letter-spacing: .01em; text-shadow: 0 0 28px rgba(181,107,255,.8), 0 5px 0 rgba(0,0,0,.55); }
 .logo p { font-size: clamp(16px, 3.4vh, 22px); letter-spacing: .28em; text-transform: uppercase; margin-top: 4px; color: #d9c0ff; }
+.picker { margin-top: auto; display: flex; gap: 12px; justify-content: center; }
+.pick { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 132px; padding: 8px 16px 10px; border-radius: 18px; border: 3px solid rgba(255,255,255,.22); background: rgba(15,10,24,.62); color: var(--fg); touch-action: manipulation; }
+.pick b { font: 400 22px var(--display); letter-spacing: .02em; }
+.pick small { font: 800 12px var(--body); color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+.pick.on { border-color: var(--gold); background: rgba(80,50,10,.55); box-shadow: 0 0 22px rgba(255,211,77,.45); }
+.pick:active { transform: scale(.96); }
 .play { font: 400 clamp(30px, 7vh, 44px) var(--display); color: var(--violet-ink); background: linear-gradient(#ffe58a, #ffb52e); border: 0; border-radius: 999px; padding: 12px 64px 14px; box-shadow: 0 6px 0 #9a5a00, 0 0 30px rgba(255,200,80,.5); touch-action: manipulation; animation: bob 1.6s ease-in-out infinite; }
 .play:active { transform: translateY(5px); box-shadow: 0 1px 0 #9a5a00; animation: none; }
 @keyframes bob { 50% { transform: scale(1.06); } }

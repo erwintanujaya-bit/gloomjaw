@@ -94,6 +94,11 @@ export function setPointScale(pxHeight, fovDeg) {
 /* ---------- breath: soft purple fire + starbursts ---------- */
 const FC = [0xeccbff, 0xb14dff, 0x5e18c8].map(c => new THREE.Color(c));
 const STAR = [new THREE.Color(0xffffff), new THREE.Color(0xd9b3ff)];
+/** each dragon breathes its own colour: { colors: [hot, mid, cool], star: [a, b] } */
+export function setBreath(b) {
+  b.colors.forEach((c, i) => FC[i].set(c));
+  b.star.forEach((c, i) => STAR[i].set(c));
+}
 let glowFire, starFire, dust, motes;
 export const FIRE_RATE = 440;       // particles per second at full blast
 let fireAcc = 0;

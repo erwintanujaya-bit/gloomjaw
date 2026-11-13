@@ -20,6 +20,12 @@ export function loadFailed() {
   $('loadText').textContent = "Gloomjaw didn't load";
   $('loadSub').textContent = 'Close this page and open it again.';
 }
+export function showLoading(text) {
+  const el = $('loading');
+  $('loadText').textContent = text; $('loadSub').textContent = 'Loading the 3D dragon'; setProgress(0);
+  el.style.transition = 'none'; el.style.opacity = '1'; el.style.pointerEvents = 'auto';
+  el.classList.remove('hidden');
+}
 export function hideLoading() {
   const el = $('loading');
   el.style.transition = 'opacity .5s'; el.style.opacity = '0'; el.style.pointerEvents = 'none';
@@ -45,6 +51,25 @@ export function setRiderButton(on, save = true) {
 }
 export const savedRider = () => store.get('rider') === '1';
 
+/** dragon picker on the title screen: one big card per dragon */
+export const savedDragon = () => store.get('dragon');
+export const saveDragon = id => store.set('dragon', id);
+export function buildPicker(dragons, onPick) {
+  const box = $('picker');
+  box.textContent = '';
+  for (const [id, d] of Object.entries(dragons)) {
+    const b = document.createElement('button');
+    b.className = 'pick'; b.dataset.id = id;
+    b.innerHTML = `<b></b><small></small>`;
+    b.firstChild.textContent = d.name; b.lastChild.textContent = d.tag;
+    b.addEventListener('click', e => { e.preventDefault(); onPick(id); });
+    box.appendChild(b);
+  }
+}
+export function setPicked(id) {
+  document.querySelectorAll('#picker .pick').forEach(b => b.classList.toggle('on', b.dataset.id === id));
+}
+
 let toastTimer = 0;
 export function toast(msg, ms = 5000) {
   const el = $('toast');
@@ -67,5 +92,6 @@ export function initMenus(h) {
   tap('bPlay', h.play);
   tap('bResume', h.resume);
   tap('bRestart', h.restart);
+  tap('bChange', h.change);
   tap('bSound', () => { setMuted(!isMuted()); store.set('muted', isMuted() ? '1' : '0'); refreshSoundButton(); });
 }

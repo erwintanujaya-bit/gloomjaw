@@ -25,32 +25,30 @@ export function pose(e, ax, ay, az) {
   if (az) q.multiply(_q.setFromAxisAngle(e.z, az));
 }
 
-export function setupRig() {
+/** build the rig from a dragon's `bones` map (see dragons.js) */
+export function setupRig(B) {
   const inner = G.inner;
   const by = {};
   inner.traverse(o => { if (o.isBone) by[o.name] = o; });
   inner.updateMatrixWorld(true);
-  const chain = names => names.map(n => mk(by, n));
+  const missing = [];
+  const one = n => { if (!n) return null; const e = mk(by, n); if (!e) missing.push(n); return e; };
+  const chain = names => names.map(one);
   const r = {
-    spine: mk(by, 'Bone_003'), chest: mk(by, 'Bone_002'),
-    neck: mk(by, 'Bone_021'), head: mk(by, 'Bone_020'),
-    jaw: mk(by, 'Bone_033'), skull: mk(by, 'Bone_035'),
-    shoulders: [mk(by, 'Bone_041'), mk(by, 'Bone_047')],
-    wr: chain(['Bone_025', 'Bone_024', 'Bone_023']),
-    wl: chain(['Bone_028', 'Bone_027', 'Bone_026']),
-    // wing fingers (two per wing): used for the flight twitch
-    frF: [chain(['Bone_049', 'Bone_048']), chain(['Bone_052', 'Bone_051', 'Bone_050'])],
-    flF: [chain(['Bone_054', 'Bone_053']), chain(['Bone_057', 'Bone_056', 'Bone_055'])],
-    tail: chain(['Bone_019', 'Bone_018', 'Bone_017', 'Bone_016', 'Bone_015', 'Bone_014']),
-    mouth: by.Bone_032,
+    spine: one(B.spine), chest: one(B.chest),
+    neck: one(B.neck), head: one(B.head),
+    jaw: one(B.jaw), skull: one(B.skull),
+    shoulders: (B.shoulders || []).map(one),
+    wr: chain(B.wr), wl: chain(B.wl),
+    // wing fingers: used for the flight twitch
+    frF: B.frF.map(chain), flF: B.flF.map(chain),
+    tail: chain(B.tail),
+    mouth: by[B.mouth],
   };
   // legs: hip, knee, ankle, toe. walk = lateral sequence, run = rotary gallop (phase offsets)
-  r.legs = [
-    { hip: 'Bone_039', knee: 'Bone_038', ankle: 'Bone_037', toe: 'Bone_036', front: 1, side: 1, walk: 0.75, run: 0.5 },
-    { hip: 'Bone_045', knee: 'Bone_044', ankle: 'Bone_043', toe: 'Bone_042', front: 1, side: -1, walk: 0.25, run: 0.6 },
-    { hip: 'Bone_013', knee: 'Bone_012', ankle: 'Bone_010', toe: 'Bone_009', front: 0, side: 1, walk: 0.5, run: 0.1 },
-    { hip: 'Bone_008', knee: 'Bone_007', ankle: 'Bone_005', toe: 'Bone_004', front: 0, side: -1, walk: 0, run: 0 },
-  ].map(L => ({ ...L, hip: mk(by, L.hip), knee: mk(by, L.knee), ankle: mk(by, L.ankle), toe: by[L.toe] }));
+  r.legs = B.legs.map(L => ({ ...L, hip: one(L.hip), knee: one(L.knee), ankle: one(L.ankle), toe: by[L.toe] }));
+  if (!r.mouth) missing.push(B.mouth);
+  if (missing.length) console.warn('Bones not found in this model:', missing.join(', '));
 
   // which way does each knee fold? rotate it +/-0.5 and see which raises the toe
   r.legs.forEach(L => {
