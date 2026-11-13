@@ -46,7 +46,9 @@ export function updateCamera(dt) {
     cam.yaw = S.heading + 0.5 + Math.sin(cam.titleAng) * 0.5;       // slow sway around the front
     cam.pitch += (0.2 - cam.pitch) * k(dt, 2); cam.dist += (15 - cam.dist) * k(dt, 2);
   } else {
-    if (cam.idle > CAM.idleReturn) {
+    // swing back behind the dragon only when nobody is steering: turning the picture while a thumb is on the stick
+    // makes "left" mean something different from one moment to the next
+    if (cam.idle > CAM.idleReturn && input.mag < 0.12) {
       cam.yaw += wrapA(S.heading + Math.PI - cam.yaw) * k(dt, CAM.returnRate);
       cam.pitch += ((S.flying ? CAM.pitchFly : CAM.pitchGround) - cam.pitch) * k(dt, 1.2);
     }

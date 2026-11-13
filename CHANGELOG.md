@@ -1,5 +1,15 @@
 # Changelog
 
+## Endless world + steadier stick
+- **No more edge.** The ground is built in 64-unit tiles around you as you move (a few per frame) and dropped behind you.
+  Trees, mushrooms, spikes, rocks and lava/glow pools are placed by a repeatable pattern, so the same spot always grows the
+  same thing. Nothing is stored for the whole world. Tested: a 600-unit run, steady memory, slowest frame 3.5 ms.
+  Ground height now matches the drawn triangles exactly, and the lighting is smooth across tile borders.
+- **Stick fixed.** The world edge used to steer the dragon back toward the middle (it looked like "right turns left"),
+  and the camera swung round behind it while a thumb was still on the stick. Now left stays screen-left for as long as you
+  hold it, and the camera only swings back when you let go (`camera.js`). Checked: left, right, up and down move the
+  dragon to the matching side of the screen.
+
 ## Knight rider
 - The rider is now the **Death Knight** (by Northcliffe, CC BY-NC 4.0, credited on the title screen and in `CREDITS.md`).
   He is loaded once (`public/models/knight.glb`, 1.5 MB, shrunk from 4.4 MB with `tools/shrink_glb.py`), seated by code

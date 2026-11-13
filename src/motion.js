@@ -20,8 +20,6 @@ export const TUNE = {
   // jump: how fast Gloomjaw leaves the ground (units/s), gravity, wind-up crouch (s)
   jumpSpeed: 8, gravity: 15, jumpWind: 0.16,
   sprintFly: 1.6,                            // Sprint button while flying = this many times faster
-  // soft edge of the world
-  edgeStart: 84, edgeHard: 97,
 };
 
 const TUNE_BASE = { ...TUNE };
@@ -33,14 +31,12 @@ const air = () => S.fs === 'climb' || S.fs === 'cruise' || S.fs === 'land';
 // wing beat: fast power downstroke (40%), slower recovery upstroke (60%). +1 = up, -1 = down
 export const wingCurve = p => (p < 0.4 ? 1 - 2 * ease(p / 0.4) : -1 + 2 * ease((p - 0.4) / 0.6));
 
-let wasHolding = false, stickFrame = 0;
-
 export function dustAtFeet(n) { G.rig.legs.forEach(L => spawnDust(L.plant, n)); }
 
 export function resetMotion() {
   S.pos.set(0, 0, 0); S.heading = 0; S.mode = 'idle'; S.flying = false; S.fs = 'ground'; S.ft = 0;
   S.sprintW = 0; S.foldW = 1; S.speed = 0; S.turn = 0; S.turnRaw = 0; S.alt = 0; S.vy = 0; S.tgtAlt = TUNE.cruiseAlt;
-  wasHolding = false; input.camYaw = 0;
+  input.camYaw = 0;
   S.gyInit = false; S.roll = 0; S.pitch = 0; S.crouch = 0; S.bob = 0; S.glide = 0; S.flaps = 0;
   act.fire = -1; act.roar = -1;
   if (G.rig) G.rig.legs.forEach(L => { L.swing = false; });
@@ -69,28 +65,15 @@ export function move(dt) {
   const h = G.heightAt;
 
   /* ---- 1. what is the player asking for? ---- */
-  // The stick is relative to the camera: up = away from the camera. We remember which way the camera
-  // looked when the thumb went down, so the camera easing back behind Gloomjaw never feeds back
-  // into the steering (otherwise he would chase the camera in circles).
-  const holding = input.mag > 0.12;
-  if (holding && !wasHolding) stickFrame = input.camYaw;
-  wasHolding = holding;
-  const cy = holding ? stickFrame : input.camYaw, fxC = Math.sin(cy), fzC = Math.cos(cy);
+  // The stick is relative to the camera, like in Roblox: up = away from the camera, left = screen-left.
+  // The camera never swings round while a thumb is on the stick (see camera.js), so holding left keeps
+  // going left instead of the picture rotating under your thumb.
+  const cy = input.camYaw, fxC = Math.sin(cy), fzC = Math.cos(cy);
   const wx = fxC * input.sy + -fzC * input.sx, wz = fzC * input.sy + fxC * input.sx;
   const gait = fly ? { gait: 'fly', amount: input.mag } : stickToGait(input.mag, input.sprint);
   S.sprintW += ((input.sprint ? 1 : 0) - S.sprintW) * k(dt, 3);
   S.foldW += ((S.fs === 'ground' || S.fs === 'touch' ? 1 : 0) - S.foldW) * k(dt, 3);   // wings tuck in while on the ground
   let want = (input.mag > 0.12 && gait.gait !== 'idle') ? Math.atan2(wx, wz) : null;
-
-  // soft edge: Gloomjaw gently turns back toward the middle
-  const dist = Math.hypot(S.pos.x, S.pos.z);
-  const edgeW = clamp((dist - TUNE.edgeStart) / (TUNE.edgeHard - TUNE.edgeStart), 0, 1);
-  if (edgeW > 0) {
-    const inward = Math.atan2(-S.pos.x, -S.pos.z);
-    if (want === null) { if (S.speed > 0.5) want = inward; }
-    else want = S.heading + wrapA(want - S.heading) * (1 - edgeW) + wrapA(inward - S.heading) * edgeW;
-  }
-  S.edge = edgeW;
 
   S.mode = fly ? 'fly' : gait.gait;
   const m = S.mode;
@@ -160,9 +143,7 @@ export function move(dt) {
   else if (S.fs === 'land') spT = S.alt < 1.4 ? 1.2 : Math.min(4, lerp(TUNE.flySpeedMin, TUNE.flySpeedMax, input.mag));
   S.speed += (spT - S.speed) * k(dt, S.fs === 'touch' ? 4 : 1.6);
   const fx = Math.sin(S.heading), fz = Math.cos(S.heading);
-  S.pos.x += fx * S.speed * dt; S.pos.z += fz * S.speed * dt;
-  const dd = Math.hypot(S.pos.x, S.pos.z);
-  if (dd > TUNE.edgeHard + 2) { S.pos.x *= (TUNE.edgeHard + 2) / dd; S.pos.z *= (TUNE.edgeHard + 2) / dd; }
+  S.pos.x += fx * S.speed * dt; S.pos.z += fz * S.speed * dt;      // the world has no edge: it is built around you as you go
 
   /* ---- 4. terrain under the body ---- */
   const g = sampleGround(S.pos.x, S.pos.z, fx, fz);
