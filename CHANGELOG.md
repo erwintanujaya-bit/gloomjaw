@@ -1,5 +1,14 @@
 # Changelog
 
+## Ring challenge (first game mechanic)
+- A winding trail of **fire rings** floats ahead of the dragon (5 at a time, in `src/rings.js`). Fly through the first one and a
+  **60 second** clock starts; every ring is +1 and a new ring appears at the far end. When time is up a **score screen** shows
+  your rings, your **best** (saved on the phone) and **Play again**. The rings and clock sit at the top of the screen.
+- The next ring in line is golden-orange, the rest red-orange. A ring pops when you pass it, with a rising chime.
+  Missed rings stay where they are; if you wander far from all of them a new trail is laid ahead of you.
+- Tune it in `RING` (`radius`, `spacing`, `turn`, `ahead`, `time`, `forgive`, `lowest`, `wobble`). New sounds in `audio.js`.
+- The flying stride was slowed much further (`airStrideHz` 0.35 to 0.8).
+
 ## Calmer turning and strides
 - Full-stick turning is about 40% slower (walk 1.5, sprint 1.2, flying 0.85 radians per second; `turnWalk`, `turnRun`, `turnFly`,
   `turnEase` in `TUNE`): a wide, lazy circle instead of a spin. The flying stride is half as fast (`airStrideHz` 0.35 to 0.8, slowed again after more testing).

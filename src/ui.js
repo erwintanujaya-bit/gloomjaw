@@ -70,6 +70,43 @@ export function setPicked(id) {
   document.querySelectorAll('#picker .pick').forEach(b => b.classList.toggle('on', b.dataset.id === id));
 }
 
+/* ring challenge HUD */
+let lastScore = -1, lastSec = -1;
+export function showScore(on) { $('score').classList.toggle('hidden', !on); }
+/** n = rings so far; the box pops when it goes up */
+export function setScore(n) {
+  $('scN').textContent = n;
+  if (n > lastScore && n > 0) { const b = $('scN').parentElement; b.classList.remove('pop'); void b.offsetWidth; b.classList.add('pop'); }
+  lastScore = n;
+}
+/** seconds left; waiting = the clock has not started yet */
+export function setTimer(t, waiting = false) {
+  const sec = Math.ceil(t);
+  const box = $('scBox');
+  box.classList.toggle('idle', waiting); box.classList.toggle('low', !waiting && t <= 10 && t > 0);
+  if (sec !== lastSec) { lastSec = sec; $('scT').textContent = sec; }
+}
+export const bestRings = () => parseInt(store.get('bestRings') || '0', 10) || 0;
+/** the score screen. Returns true when it is a new best. */
+export function showResult(on, n = 0) {
+  $('result').classList.toggle('hidden', !on);
+  if (!on) return false;
+  const prev = bestRings(), isBest = n > prev;
+  if (isBest) store.set('bestRings', String(n));
+  $('resN').textContent = n;
+  const p = $('resBest');
+  p.textContent = isBest ? (prev ? `New best! \u{1F389} (was ${prev})` : 'New best! \u{1F389}') : `Best: ${prev}`;
+  p.classList.toggle('best', isBest);
+  return isBest;
+}
+/** a tip until the first ring has ever been flown through on this device */
+export function maybeRingHint() {
+  if (store.get('ringSeen') === '1') return false;
+  toast('Fly through the fire ring to start! \u{1F525} 60 seconds', 6000);
+  return true;
+}
+export const rememberRing = () => store.set('ringSeen', '1');
+
 let toastTimer = 0;
 export function toast(msg, ms = 5000) {
   const el = $('toast');
@@ -93,5 +130,6 @@ export function initMenus(h) {
   tap('bResume', h.resume);
   tap('bRestart', h.restart);
   tap('bChange', h.change);
+  tap('bAgain', h.again);
   tap('bSound', () => { setMuted(!isMuted()); store.set('muted', isMuted() ? '1' : '0'); refreshSoundButton(); });
 }

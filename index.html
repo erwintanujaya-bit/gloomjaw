@@ -29,6 +29,10 @@
   <div id="hud" class="hidden">
     <button id="bPause" class="pill" aria-label="Pause">II</button>
     <div id="fps" class="fps hidden"></div>
+    <div id="score" class="score" aria-live="polite">
+      <div class="sc"><span class="ico">&#128293;</span><b id="scN">0</b></div>
+      <div class="sc" id="scBox"><span class="ico">&#9201;&#65039;</span><b id="scT">60</b></div>
+    </div>
     <button id="bUp" class="round fly-only" aria-label="Fly up">&#9650;<small>Up</small></button>
     <button id="bDown" class="round fly-only" aria-label="Fly down">&#9660;<small>Down</small></button>
     <button id="bRide" class="pill rider" aria-label="Knight rider on or off"><span class="ico">&#9876;&#65039;</span> <span id="rideLabel">Knight</span></button>
@@ -49,6 +53,16 @@
     <div id="picker" class="picker" aria-label="Choose your dragon"></div>
     <button id="bPlay" class="play">Play!</button>
     <small class="credit">Knight: &ldquo;Death Knight&rdquo; by Northcliffe, CC BY-NC 4.0</small>
+  </div>
+
+  <!-- ring challenge result -->
+  <div id="result" class="screen dim hidden">
+    <div class="panel result">
+      <h2>Time&rsquo;s up!</h2>
+      <div class="big"><span id="resN">0</span><small>rings of fire</small></div>
+      <p id="resBest">Best: 0</p>
+      <button id="bAgain" class="play small">Play again</button>
+    </div>
   </div>
 
   <!-- pause -->

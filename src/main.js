@@ -11,7 +11,8 @@ import { initEffects, updateEffects, emitFire, getMouth, setPointScale, setBreat
 import { buildWorld, updateWorld, getFireLight } from './world.js';
 import { updateCamera, setTitleCamera, resetCamera, CAM } from './camera.js';
 import { initControls } from './controls.js';
-import { unlockAudio, sfxFire, sfxRoar, setVoice } from './audio.js';
+import { unlockAudio, sfxFire, sfxRoar, setVoice, sfxRing, sfxGo, sfxEnd } from './audio.js';
+import { initRings, updateRings, resetRings, hideRings, game as ringGame, nextRing, ringCount } from './rings.js';
 import * as ui from './ui.js';
 
 const canvas = document.getElementById('c');
@@ -58,7 +59,7 @@ const updateInput = initControls({
   ride: () => { if (phase === 'playing' && !paused) { const on = !riderOn(); setRider(on); ui.setRiderButton(on); } },
   fire: () => { if (phase === 'playing' && !paused && act.fire < 0) { act.fire = 0; sfxFire(); } },
   roar: () => { if (phase === 'playing' && !paused && act.roar < 0) { act.roar = 0; sfxRoar(); } },
-  pause: () => setPaused(!paused),
+  pause: () => { if (ringGame.state !== 'over') setPaused(!paused); },     // the score screen has its own button
 });
 
 ui.loadSettings();
@@ -68,18 +69,21 @@ ui.initMenus({
     phase = 'playing'; paused = false;
     setTitleCamera(false); resetCamera();
     ui.showTitle(false); ui.showHud(true); ui.setFlying(false);
-    ui.maybeSoundHint();
+    ui.showScore(true); ui.showResult(false); resetRings();          // a fresh ring trail ahead of the dragon
+    const tip = ui.maybeRingHint();
+    setTimeout(ui.maybeSoundHint, tip ? 6300 : 0);
   },
   resume: () => setPaused(false),
   change: () => {                   // back to the title screen to pick a dragon
     if (phase !== 'playing') return;
-    paused = false; ui.showPause(false); ui.showHud(false);
+    paused = false; ui.showPause(false); ui.showHud(false); ui.showResult(false); ui.showScore(false); hideRings();
     resetMotion(); resetCamera(); setTitleCamera(true);
     phase = 'title'; ui.showTitle(true);
   },
   restart: () => {
-    resetMotion(); resetCamera(); ui.setFlying(false); setPaused(false);
+    resetMotion(); resetCamera(); ui.setFlying(false); setPaused(false); resetRings();
   },
+  again: () => { ui.showResult(false); paused = false; resetRings(); },        // Play again after the score screen
 });
 
 /* ---------- load the world and Gloomjaw ---------- */
@@ -88,6 +92,12 @@ let worldId = DRAGONS[firstDragon].world;
 const theme = buildWorld(scene, worldId);
 initEffects();
 setAmbience(theme);
+initRings(scene, {                  // the 60 second ring challenge (rings.js)
+  start: () => { ui.rememberRing(); sfxGo(); ui.toast('Go! 60 seconds!', 1800); },
+  score: n => { ui.setScore(n); if (n > 0) sfxRing(n); },
+  time: t => ui.setTimer(t, ringGame.state === 'free'),
+  end: n => { sfxEnd(); paused = true; ui.showResult(true, n); },
+});
 const fireLight = getFireLight();
 ui.showFps(showFps);
 
@@ -147,6 +157,7 @@ function loadDragon(id, first = false) {
     setTitleCamera(true);
     currentId = id; ui.setPicked(id); ui.saveDragon(id);
     phase = 'title';
+    hideRings(); ui.showScore(false);
     ui.showTitle(true); ui.showHud(false);
     ui.hideLoading();
     busy = false;
@@ -193,6 +204,7 @@ function update(dt) {
   if (act.roar >= 0) { act.roar += dt; if (act.roar > ROAR_DUR) act.roar = -1; }
   const fk = env(act.fire, FIRE_DUR, 0.3, 0.4), rk = env(act.roar, ROAR_DUR, 0.25, 0.5);
   move(dt);
+  if (phase === 'playing') updateRings(dt);
   animateRig(fk, rk, dt);
   updateRider(dt);
   updateCamera(dt);
@@ -208,7 +220,7 @@ frame();
 // dev-only test handle: __gj.sim(seconds) fast-forwards the game in 1/60 s steps
 if (import.meta.env.DEV) {
   window.__gj = {
-    G, S, act, input, renderer, loadDragon, RIDER, CAM,
+    G, S, act, input, renderer, loadDragon, RIDER, CAM, ringGame, nextRing, ringCount,
     sim(sec) { if (phase === 'title') { ui.showTitle(false); ui.showHud(true); } phase = 'playing'; paused = false; for (let i = 0; i < sec * 60; i++) update(1 / 60); },
   };
 }

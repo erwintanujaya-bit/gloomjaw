@@ -116,3 +116,30 @@ export function sfxRoar() {
   roarVoice(a, t0, 1.9, 95 * p, 175 * p, 62 * p, 0.42, 0.3);
   [2.0, 2.38, 2.72].forEach((s, i) => roarVoice(a, t0 + s, 0.32, (85 - i * 6) * p, (105 - i * 8) * p, 60 * p, 0.28 - i * 0.06, 0.25));
 }
+
+/* ---------- ring challenge sounds (small synthesized chimes) ---------- */
+function chime(a, t0, freq, dur, vol, type = 'sine') {
+  const o = a.createOscillator(), g = a.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, t0);
+  g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(vol, t0 + 0.012); g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+  o.connect(g).connect(a.destination); o.start(t0); o.stop(t0 + dur + 0.02);
+}
+/** through a ring: a bright two-note ding that climbs a little with every ring in a row */
+export function sfxRing(n) {
+  const a = audio(); if (!a) return;
+  const t0 = a.currentTime, f = 520 * Math.pow(1.06, Math.min(n, 12));
+  chime(a, t0, f, 0.35, 0.22); chime(a, t0 + 0.07, f * 1.5, 0.45, 0.2); chime(a, t0, f * 2, 0.2, 0.06, 'triangle');
+  burst(2600, 0.25, 0.25);                       // a whoosh of fire
+}
+/** the clock starts */
+export function sfxGo() {
+  const a = audio(); if (!a) return;
+  const t0 = a.currentTime;
+  [523, 659, 784, 1047].forEach((f, i) => chime(a, t0 + i * 0.07, f, 0.35, 0.18, 'triangle'));
+}
+/** time is up */
+export function sfxEnd() {
+  const a = audio(); if (!a) return;
+  const t0 = a.currentTime;
+  [784, 659, 523, 392].forEach((f, i) => chime(a, t0 + i * 0.14, f, 0.5, 0.2, 'triangle'));
+}
