@@ -14,7 +14,9 @@ export const TUNE = {
   // flying: flaps per second, flaps before a glide, glide length (s), starting height
   climbHz: 1.7, cruiseHz: 1.15, flapsBeforeGlide: 3, glideTime: 1.8, cruiseAlt: 4,
   flySpeedMin: 1.4, flySpeedMax: 22.5,          // slowest / fastest flight (stick pushed 0 / 1)
-  vertSpeed: 4.5, minAlt: 2.4, maxAlt: 30,   // Up/Down button speed and height limits
+  vertSpeed: 16, minAlt: 2.4, maxAlt: 90,    // Up/Down button speed and height limits
+  assistRate: 18,                            // ring challenge: how fast the dragon follows the height of the next ring by itself
+  maxBank: 0.785,                            // the most the body rolls into a turn (radians): 0.785 = 45 degrees
   // turning (radians per second, top speed of the turn)
   turnWalk: 1.5, turnRun: 1.2, turnFly: 0.85, turnEase: 2.2,
   // jump: how fast Gloomjaw leaves the ground (units/s), gravity, wind-up crouch (s)
@@ -41,7 +43,7 @@ export function dustAtFeet(n) { G.rig.legs.forEach(L => spawnDust(L.plant, n)); 
 
 export function resetMotion() {
   S.pos.set(0, 0, 0); S.heading = 0; S.mode = 'idle'; S.flying = false; S.fs = 'ground'; S.ft = 0;
-  S.sprintW = 0; S.foldW = 1; S.legRun = 0; S.fp = 0; S.speed = 0; S.turn = 0; S.turnRaw = 0; S.alt = 0; S.vy = 0; S.tgtAlt = TUNE.cruiseAlt;
+  S.sprintW = 0; S.foldW = 1; S.legRun = 0; S.fp = 0; S.assistAlt = null; S.speed = 0; S.turn = 0; S.turnRaw = 0; S.alt = 0; S.vy = 0; S.tgtAlt = TUNE.cruiseAlt;
   input.camYaw = 0;
   S.gyInit = false; S.roll = 0; S.pitch = 0; S.crouch = 0; S.bob = 0; S.glide = 0; S.flaps = 0;
   act.fire = -1; act.roar = -1;
@@ -94,6 +96,10 @@ export function move(dt) {
 
   /* ---- 2. flight state machine: ground > crouch > climb > cruise > land > touch > ground ---- */
   if (fly) S.tgtAlt = clamp(S.tgtAlt + ((input.up ? 1 : 0) - (input.down ? 1 : 0) - pull * 0.9) * TUNE.vertSpeed * dt, TUNE.minAlt, TUNE.maxAlt);   // stick down also lowers the flight height, but never below minAlt
+  // ring challenge: unless you press Up/Down yourself, the dragon follows the height of the next ring (rings.js sets assistAlt),
+  // so one thumb can steer + the other boost while the course goes high and low
+  const assist = fly && S.assistAlt !== null && !input.up && !input.down;
+  if (assist) S.tgtAlt = clamp(S.tgtAlt + clamp(S.assistAlt - S.tgtAlt, -TUNE.assistRate * dt, TUNE.assistRate * dt), TUNE.minAlt, TUNE.maxAlt);
   switch (S.fs) {
     case 'ground': if (fly) { S.fs = 'crouch'; S.ft = 0; S.tgtAlt = Math.max(S.tgtAlt, TUNE.cruiseAlt); } break;
     case 'crouch':
@@ -102,14 +108,14 @@ export function move(dt) {
       else if (S.ft > 0.45) { S.fs = 'climb'; S.vy = 5.5; burst(200, 0.8, 0.3); dustAtFeet(3); }
       break;
     case 'climb': {
-      const vyT = clamp((S.tgtAlt - S.alt) * 1.1, 1.6, 6);
+      const vyT = clamp((S.tgtAlt - S.alt) * 1.1, 1.6, S.assistAlt !== null ? 16 : 6);
       S.vy += (vyT - S.vy) * k(dt, 1.4); S.alt += S.vy * dt;
       if (S.alt >= S.tgtAlt - 0.2) S.fs = 'cruise';
       if (!fly) S.fs = 'land';
       break;
     }
     case 'cruise': {
-      const tgt = S.tgtAlt + 0.35 * Math.sin(t * 0.45) - (S.glide > 0 ? 0.3 : 0), na = S.alt + (tgt - S.alt) * k(dt, 1.3);
+      const tgt = S.tgtAlt + 0.35 * Math.sin(t * 0.45) - (S.glide > 0 ? 0.3 : 0), na = S.alt + (tgt - S.alt) * k(dt, S.assistAlt !== null ? 3.5 : 1.3);
       S.vy = (na - S.alt) / Math.max(dt, 1e-4); S.alt = na;
       if (!fly) S.fs = 'land';
       break;
@@ -209,7 +215,7 @@ export function move(dt) {
   const lift = -0.12 * S.amp * wingCurve(S.wp) * Math.min(1, S.alt);
   let rollT, pitchT;
   if (inAir) {
-    rollT = -Math.min(0.45, S.turn * S.speed * 0.14);
+    rollT = -clamp(S.turn * S.speed * 0.14, -TUNE.maxBank, TUNE.maxBank);      // leans into the turn, never past 45 degrees (either way)
     pitchT = S.fs === 'land' && S.alt < 1.4 ? -0.32 : -Math.atan2(S.vy, Math.max(2, S.speed)) * 0.8;
   } else {
     const gA = 2 * Math.PI * S.gp;

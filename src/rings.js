@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { V, canvasTex } from './util.js';
 import { G, S, input } from './state.js';
 
+const TUNE_MIN = 2.4;                 // never ask the dragon to fly lower than this above the ground
+
 /*
  * RING CHALLENGE: at the start there is ONE fire ring ahead of the dragon, and no arrow. Fly through it and the race
  * begins: the 60 second clock starts, a winding trail of rings appears, and an arrow points at the next one. Every ring you
@@ -21,15 +23,16 @@ export const RING = {
   ahead: 6,              // rings laid out at once (they glow through the fog, so you can see the next bends coming)
   time: 60,              // length of the challenge
   forgive: 1.1,          // how generous the hit test is (1.1 = the ring counts out to 110% of its radius)
-  lowest: 0.85,          // ring centre is at least this many radii above the ground...
-  wobble: 4,             // ...plus up to this much extra height
+  lowest: 0.9,           // the lowest rings: centre this many radii above the ground (skimming the ground)
+  highest: 55,           // the highest rings: centre this far above the ground
+  climb: [14, 34],       // how much higher or lower the next ring is than the one before (random in this range)
 };
 
 export const game = { state: 'free', score: 0, time: RING.time };
 
 const SLOTS = 8, EMBERS = 90;
 let scene = null, hooks = {}, slots = [], rings = [], dying = [], embers = null, emberData = [], ready = false;
-const tail = { pos: new V(), hdg: 0, streak: 0 };
+const tail = { pos: new V(), hdg: 0, streak: 0, off: 10, y: null };
 const _P = new V(), _d = new V(), _u = new V(), _v = new V(), _n = new V();
 
 /** call once, after the scene exists. hooks: { start(), score(n), time(sec), end(score) } */
@@ -71,18 +74,29 @@ function nextTurn() {
   return (Math.random() < 0.5 ? -1 : 1) * (RING.sharp[0] + Math.random() * (RING.sharp[1] - RING.sharp[0]));
 }
 
-/** put one more ring at the end of the trail (gap and turn are chosen at random unless given) */
-function addRing(gap = RING.spacing[0] + Math.random() * (RING.spacing[1] - RING.spacing[0]), turn = nextTurn()) {
+/** how high above the ground the next ring is: it jumps up or down by a good amount, so the course has real highs and lows */
+function nextOffset() {
+  const lo = RING.radius * RING.lowest, hi = RING.highest, mid = (lo + hi) / 2;
+  const up = tail.off < mid ? Math.random() < 0.7 : Math.random() < 0.3;       // low rings are usually followed by a climb, high ones by a dive
+  const d = RING.climb[0] + Math.random() * (RING.climb[1] - RING.climb[0]);
+  return Math.min(hi, Math.max(lo, tail.off + (up ? d : -d)));
+}
+
+/** put one more ring at the end of the trail (gap, turn and height are chosen at random unless given) */
+function addRing(gap = RING.spacing[0] + Math.random() * (RING.spacing[1] - RING.spacing[0]), turn = nextTurn(), off = nextOffset()) {
   const slot = takeSlot();
   if (!slot) return;
   tail.hdg += turn;
   tail.pos.x += Math.sin(tail.hdg) * gap; tail.pos.z += Math.cos(tail.hdg) * gap;
-  const y = G.heightAt(tail.pos.x, tail.pos.z) + RING.radius * RING.lowest + Math.random() * RING.wobble;
-  const pos = new V(tail.pos.x, y, tail.pos.z), n = new V(Math.sin(tail.hdg), 0, Math.cos(tail.hdg));
+  const y = G.heightAt(tail.pos.x, tail.pos.z) + off;
+  const pos = new V(tail.pos.x, y, tail.pos.z);
+  // the ring faces along the way the trail runs, including up or down
+  const n = new V(Math.sin(tail.hdg) * gap, tail.y === null ? 0 : y - tail.y, Math.cos(tail.hdg) * gap).normalize();
+  tail.off = off; tail.y = y;
   slot.group.position.copy(pos); slot.group.lookAt(pos.x + n.x, pos.y, pos.z + n.z);     // the ring faces along the trail
   slot.group.scale.setScalar(1); slot.group.visible = true;
   slot.core.material.opacity = 1;
-  rings.push({ pos, n, slot, prevS: null });
+  rings.push({ pos, n, slot, prevS: null, off });
 }
 
 function clearRings() {
@@ -94,14 +108,14 @@ function clearRings() {
 /** the start of a round: ONE ring straight ahead of the dragon */
 function layFirst() {
   clearRings();
-  tail.pos.set(S.pos.x, 0, S.pos.z); tail.hdg = S.heading; tail.streak = 0;
-  addRing(RING.firstDistance, 0);
+  tail.pos.set(S.pos.x, 0, S.pos.z); tail.hdg = S.heading; tail.streak = 0; tail.y = null;
+  addRing(RING.firstDistance, 0, RING.radius * RING.lowest + 2 + Math.random() * 3);     // the first ring is low and easy
 }
 
 /** a whole trail of rings, starting from the dragon (used if you wander far away in the middle of a round) */
 function layTrail() {
   clearRings();
-  tail.pos.set(S.pos.x, 0, S.pos.z); tail.hdg = S.heading; tail.streak = 2;       // the first rings are straight ahead
+  tail.pos.set(S.pos.x, 0, S.pos.z); tail.hdg = S.heading; tail.streak = 2; tail.off = 12; tail.y = null;       // the first rings are straight ahead
   while (rings.length < RING.ahead) addRing();
 }
 
@@ -109,17 +123,17 @@ function layTrail() {
 export function resetRings() {
   if (!ready) return;
   game.state = 'free'; game.score = 0; game.time = RING.time;
-  layFirst();
+  layFirst(); S.assistAlt = null;
   hooks.score && hooks.score(0); hooks.time && hooks.time(RING.time);
 }
-export function hideRings() { if (!ready) return; clearRings(); game.state = 'free'; if (embers) embers.visible = false; }
+export function hideRings() { if (!ready) return; clearRings(); game.state = 'free'; S.assistAlt = null; if (embers) embers.visible = false; }
 
 function collect(ring) {
   rings.splice(rings.indexOf(ring), 1);
   dying.push({ slot: ring.slot, t: 0 });
   if (game.state === 'free') {                                       // the first ring: the race begins
     game.state = 'run'; game.time = RING.time; hooks.start && hooks.start();
-    tail.pos.set(ring.pos.x, 0, ring.pos.z); tail.hdg = Math.atan2(ring.n.x, ring.n.z); tail.streak = 2;   // the trail carries on from here
+    tail.pos.set(ring.pos.x, 0, ring.pos.z); tail.hdg = Math.atan2(ring.n.x, ring.n.z); tail.streak = 2; tail.off = ring.off; tail.y = ring.pos.y;   // the trail carries on from here
   }
   game.score++;
   hooks.score && hooks.score(game.score);
@@ -156,9 +170,12 @@ export function updateRings(dt) {
   // the clock
   if (game.state === 'run') {
     game.time -= dt;
-    if (game.time <= 0) { game.time = 0; game.state = 'over'; hooks.time && hooks.time(0); clearRings(); embers.visible = false; hooks.end && hooks.end(game.score); return; }
+    if (game.time <= 0) { game.time = 0; game.state = 'over'; hooks.time && hooks.time(0); clearRings(); S.assistAlt = null; embers.visible = false; hooks.end && hooks.end(game.score); return; }
     hooks.time && hooks.time(game.time);
   }
+
+  // glide to the height of the next ring (see assistAlt in motion.js)
+  S.assistAlt = rings[0] ? Math.max(TUNE_MIN, rings[0].pos.y - 1.6 - S.gy) : null;
 
   // looks: the next ring in line glows golden-orange, the rest red-orange; fire flickers; a ring you just passed swells and fades
   const t = G.t;

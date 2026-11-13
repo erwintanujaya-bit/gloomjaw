@@ -1,5 +1,14 @@
 # Changelog
 
+## Banking limit + a course with real highs and lows
+- **Body roll capped at 45 degrees both ways** (`maxBank` in `TUNE`). The old limit only applied to one direction, so turning the other
+  way at speed rolled the dragon up to about 90 degrees.
+- **Rings go high and low.** Each ring's height jumps up or down by 14 to 34 units from the one before, between 7 (skimming the ground)
+  and 55 above the ground (`lowest`, `highest`, `climb` in `RING`). Rings now tilt to face along the path, up or down.
+- **The dragon follows the next ring's height by itself** during the challenge (`assistAlt`, `assistRate` in `TUNE`), unless you press Up or
+  Down yourself: your right thumb is busy with Sprint, so one thumb steers and the other boosts. Set `assistRate` to 0 to turn this off.
+  Manual Up/Down is faster too (`vertSpeed` 16) and the ceiling is 90 (`maxAlt`).
+
 ## Close-up camera, faster dragon, one ring to start
 - **Camera:** very close when slow (6 units behind: the dragon and knight fill the screen), pulling smoothly back to about 24 at top speed
   while the view widens from 48 to 62 degrees (`CAM` in `camera.js`: `distClose`, `distFar`, `speedFar`, `fovClose`, `fovFar`). It follows speed, not "flying or walking".
