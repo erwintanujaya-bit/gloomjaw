@@ -19,6 +19,9 @@ export const TUNE = {
   turnWalk: 2.6, turnRun: 2.0, turnFly: 1.6, turnEase: 3.2,
   // jump: how fast Gloomjaw leaves the ground (units/s), gravity, wind-up crouch (s)
   jumpSpeed: 8, gravity: 15, jumpWind: 0.16,
+  // running legs while flying: strides per second (slow glide, full speed), how far each leg swings,
+  // how far forward the front legs reach / how far back the hind legs trail, and how much the knee folds on the way forward
+  airStrideHz: [1.5, 3.2], airSwing: 0.55, airReachFront: 0.12, airReachBack: 0.28, airFold: 0.85,
   sprintFly: 1.6,                            // Sprint button while flying = this many times faster
 };
 
@@ -35,7 +38,7 @@ export function dustAtFeet(n) { G.rig.legs.forEach(L => spawnDust(L.plant, n)); 
 
 export function resetMotion() {
   S.pos.set(0, 0, 0); S.heading = 0; S.mode = 'idle'; S.flying = false; S.fs = 'ground'; S.ft = 0;
-  S.sprintW = 0; S.foldW = 1; S.speed = 0; S.turn = 0; S.turnRaw = 0; S.alt = 0; S.vy = 0; S.tgtAlt = TUNE.cruiseAlt;
+  S.sprintW = 0; S.foldW = 1; S.legRun = 0; S.fp = 0; S.speed = 0; S.turn = 0; S.turnRaw = 0; S.alt = 0; S.vy = 0; S.tgtAlt = TUNE.cruiseAlt;
   input.camYaw = 0;
   S.gyInit = false; S.roll = 0; S.pitch = 0; S.crouch = 0; S.bob = 0; S.glide = 0; S.flaps = 0;
   act.fire = -1; act.roar = -1;
@@ -286,7 +289,14 @@ export function animateRig(fk, rk, dt) {
   });
   if (G.glowMat) G.glowMat.emissiveIntensity = 1.1 + 0.35 * Math.sin(t * 2.2) + rk * 2.5 + fk * 1.6;
 
-  // legs: planted-foot IK on the ground, loose dangle in the air
+  // flying legs run in a cycle: faster flight = faster, bigger strides; a slow glide = small, lazy strides
+  const flyLegs = S.fs === 'climb' || S.fs === 'cruise' ? 1 : 0;
+  S.legRun += (flyLegs - S.legRun) * k(dt, 4);
+  const spN = clamp(S.speed / TUNE.flySpeedMax, 0, 1);
+  S.fp += dt * lerp(TUNE.airStrideHz[0], TUNE.airStrideHz[1], spN) * S.legRun;
+  const cyc = S.legRun * lerp(0.6, 1, spN);
+
+  // legs: planted-foot IK on the ground, running in the air (or a loose dangle when hovering and landing)
   model.updateMatrixWorld(true);
   const gW = 1 - Math.min(1, S.alt / 0.6), sc = model.scale.x;
   const fwd = _f.set(Math.sin(S.heading), 0, Math.cos(S.heading));
@@ -324,6 +334,14 @@ export function animateRig(fk, rk, dt) {
       fa = 0.3 + 0.06 * Math.sin(t * 1.8 + i) - reach * 0.2;
       fh += S.pedal * 0.4 * Math.sin(t * 6.5 + i * 1.7);
       fkn += S.pedal * 0.3 * (0.5 + 0.5 * Math.sin(t * 6.5 + i * 1.7 + 1.2));
+      // flying: the legs run like an animal at a gallop (same leg timing as the ground sprint). Each leg pushes BACK
+      // to drive the body forward, then folds and swings forward to reach again. +hip = leg swings back.
+      if (cyc > 0.01) {
+        const ph = 2 * Math.PI * (S.fp + L.run), sn = Math.sin(ph), cs = Math.cos(ph);
+        fh = lerp(fh, (L.front ? -TUNE.airReachFront : TUNE.airReachBack) + TUNE.airSwing * sn, cyc);
+        fkn = lerp(fkn, 0.2 + TUNE.airFold * Math.max(0, -cs), cyc);             // folds while swinging forward, straight while pushing back
+        fa = lerp(fa, 0.25 + 0.45 * sn, cyc);                                    // toes flick with the stroke
+      }
     }
     pose(L.hip, lerp(fh, dh, gW));
     pose(L.knee, lerp(L.ks * fkn, dk, gW));

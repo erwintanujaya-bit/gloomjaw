@@ -1,5 +1,11 @@
 # Changelog
 
+## Running legs in flight
+- While flying (climbing or cruising) the legs no longer hang still: they run in a gallop, each leg pushing back to drive the
+  body forward, then folding and swinging forward again, with the same leg timing as the ground sprint. Faster flight means
+  faster and bigger strides; a slow glide gives small lazy ones. Landing and hovering still use the old relaxed legs.
+  Tuned in `TUNE` (`airStrideHz`, `airSwing`, `airReachFront`, `airReachBack`, `airFold`).
+
 ## Stick down
 - Pulling the stick **down** no longer turns the dragon around. In the air it slows to the slowest flying speed and sinks to the
   lowest flying height (`minAlt`), but keeps flying: only the Land button lands. On the ground it stops. Down-and-left/right

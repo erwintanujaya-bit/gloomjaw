@@ -17,7 +17,8 @@ export const S = {
   mode: 'idle',          // idle | walk | run | fly   (what we are doing now)
   flying: false,         // player wants to be in the air (Fly button)
   fs: 'ground',          // ground > crouch > climb > cruise > land > touch;  jump: ground > jwind > hop > touch
-  foldW: 1,              // 0..1, wings tucked in on the ground (see wing.fold in dragons.js)
+  legRun: 0, fp: 0,      // flying legs: how much they are running (0..1), and where they are in the stride
+  foldW: 1,             // 0..1, wings tucked in on the ground (see wing.fold in dragons.js)
   sprintW: 0,          // 0..1, eased sprint amount (speed boost in the air)
   ft: 0, heading: 0, pos: new V(), speed: 0, turn: 0, turnRaw: 0,
   edge: 0,               // 0..1, how close to the edge of the world
