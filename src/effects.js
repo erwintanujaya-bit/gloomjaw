@@ -210,6 +210,9 @@ function updateMotes(dt, cx, cz) {
   motes.material.opacity = 0.7 + 0.15 * Math.sin(G.t * 1.3);
 }
 
+/** colours of the floating motes (void sparks / lava embers) and of the dust puffs */
+export function setAmbience(a) { motes.material.color.set(a.motes); DUST_COL.set(a.dust); }
+
 export function initEffects() {
   glowFire = new Particles(360, glowTex, true);
   starFire = new Particles(120, starTex, true);

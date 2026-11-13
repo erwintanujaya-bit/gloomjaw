@@ -7,7 +7,7 @@ import { setupRig } from './rig.js';
 import { move, animateRig, resetMotion, toggleFly, jump, applyTune } from './motion.js';
 import { DRAGONS, DEFAULT_DRAGON } from './dragons.js';
 import { initRider, setRider, riderOn, updateRider } from './rider.js';
-import { initEffects, updateEffects, emitFire, getMouth, setPointScale, setBreath } from './effects.js';
+import { initEffects, updateEffects, emitFire, getMouth, setPointScale, setBreath, setAmbience } from './effects.js';
 import { buildWorld, updateWorld, getFireLight } from './world.js';
 import { updateCamera, setTitleCamera, resetCamera } from './camera.js';
 import { initControls } from './controls.js';
@@ -83,8 +83,11 @@ ui.initMenus({
 });
 
 /* ---------- load the world and Gloomjaw ---------- */
-buildWorld(scene);
+const firstDragon = DRAGONS[ui.savedDragon()] ? ui.savedDragon() : DEFAULT_DRAGON;
+let worldId = DRAGONS[firstDragon].world;
+const theme = buildWorld(scene, worldId);
 initEffects();
+setAmbience(theme);
 const fireLight = getFireLight();
 ui.showFps(showFps);
 
@@ -130,6 +133,7 @@ function loadDragon(id, first = false) {
     const rider = G.model ? riderOn() : ui.savedRider();
     if (G.model) disposeModel(G.model);
     scene.add(model);
+    if (cfg.world !== worldId) { worldId = cfg.world; setAmbience(buildWorld(scene, worldId)); }   // each dragon lives in its own biome
     G.model = model; G.inner = inner; G.dragon = cfg;
     model.updateMatrixWorld(true);
     G.rig = setupRig(cfg.bones);
@@ -149,10 +153,9 @@ function loadDragon(id, first = false) {
   }, err => { console.error(err); busy = false; ui.loadFailed(); });
 }
 
-const savedDragon = ui.savedDragon();
 let currentId = null;
 ui.buildPicker(DRAGONS, id => { if (id !== currentId && phase === 'title') loadDragon(id); });
-loadDragon(DRAGONS[savedDragon] ? savedDragon : DEFAULT_DRAGON, true);
+loadDragon(firstDragon, true);
 
 /* ---------- main loop ---------- */
 const clock = new THREE.Clock();

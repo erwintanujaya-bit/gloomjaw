@@ -278,9 +278,11 @@ export function animateRig(fk, rk, dt) {
   const W = G.dragon ? G.dragon.wing : { offset: 0, scale: 1, fold: 0 };
   const tip = 0.04 * Math.sin(t * 2.3) * (S.glide > 0 ? 1 : 0.3), a = W.offset + W.fold * (riderOn() ? W.riderFold ?? 1 : 1) * S.foldW + S.base + S.amp * v * W.scale;
   [[r.wr, 1, r.frF], [r.wl, -1, r.flF]].forEach(([w, s, fingers], j) => {
-    pose(w[0], 0, s * S.sweep * 0.5, s * a);
-    pose(w[1], 0, 0, s * S.amp * 0.18 * v);
-    pose(w[2], 0, s * (0.32 * fold - S.sweep * 0.3), s * (-0.5 * fold + tip * (j ? -1 : 1) + 0.12 * S.amp * Math.sin(2 * Math.PI * S.wp - 0.9)));
+    // on the ground the wings can also swing back (foldSweep), bend at the elbow and wrist (foldElbow/foldWrist)
+    const fw = S.foldW * (riderOn() ? W.riderFold ?? 1 : 1);
+    pose(w[0], 0, s * (S.sweep * 0.5 + (W.foldSweep || 0) * fw), s * a);
+    pose(w[1], 0, s * (W.foldElbowY || 0) * fw, s * (S.amp * 0.18 * v + (W.foldElbow || 0) * fw));
+    pose(w[2], 0, s * (0.32 * fold - S.sweep * 0.3), s * (-0.5 * fold + (W.foldWrist || 0) * fw + tip * (j ? -1 : 1) + 0.12 * S.amp * Math.sin(2 * Math.PI * S.wp - 0.9)));
     // finger twitch: each finger lags a little behind the wing, curls hard on the downstroke,
     // and just flexes gently while gliding (staggered per finger and per joint)
     const airW = inAir ? 1 : 0.25;

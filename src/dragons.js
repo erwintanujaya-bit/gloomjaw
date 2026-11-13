@@ -11,7 +11,8 @@ export const DRAGONS = {
   gloomjaw: {
     name: 'Gloomjaw', tag: 'Void dragon',
     model: 'models/gloomjaw.glb',
-    size: 7,                                    // longest side of the model in world units
+    world: 'void',                              // which biome it lives in (themes in world.js)
+    size: 7,                                   // longest side of the model in world units
     voice: 1,                                   // roar pitch (1 = normal, higher = squeakier)
     breath: { colors: [0xeccbff, 0xb14dff, 0x5e18c8], star: [0xffffff, 0xd9b3ff], light: 0xa040ff },
     wing: { offset: 0, scale: 1, fold: 0 },     // flap tweaks if the model's wings rest differently (fold = extra tuck on the ground)
@@ -36,10 +37,13 @@ export const DRAGONS = {
   emberclaw: {
     name: 'Emberclaw', tag: 'Inferno dragon',
     model: 'models/emberclaw.glb',
+    world: 'lava',
     size: 7,
     voice: 1.25,
     breath: { colors: [0xfff1b0, 0xff8a1e, 0xb02a08], star: [0xffffff, 0xffd27a], light: 0xff7a20 },
-    wing: { offset: -0.5, scale: 1, fold: 1.2, riderFold: 0.35 },   // wings rest raised: flap lower, tuck up on the ground (less so with a rider)
+    // this model's wings rest raised: flap lower in the air, and on the ground sweep them back along the body
+    // (foldSweep = swing back, foldWrist = bend the tip, riderFold = how much of that fold stays with a rider on)
+    wing: { offset: -0.5, scale: 1, fold: 0, foldSweep: 0.75, foldWrist: 0.3, riderFold: 0.5 },
     rider: { forward: -0.9, scale: 1 },            // seat behind the wing roots (world units along the back)
     tune: {},
     bones: {

@@ -1,5 +1,14 @@
 # Changelog
 
+## Lava Lands + calmer wings
+- **Biomes are themes** (`THEMES` in `src/world.js`): colours, light, fog, props and glow. Each dragon has a
+  `world` in `dragons.js`; picking Emberclaw builds the **Lava Lands**, picking Gloomjaw the Void Jungle.
+  The old world is removed and its memory freed when you switch.
+- Lava Lands: black basalt with glowing cracks, big lava lakes, obsidian spikes, charred trees with embers,
+  red haze and floating embers.
+- Emberclaw's wings now sweep back low along the body when it stands still (they used to point straight up).
+  New wing settings in `dragons.js`: `foldSweep`, `foldWrist`, `riderFold`.
+
 ## Second dragon: Emberclaw
 - **Dragons are data now** (`src/dragons.js`): each dragon has its model, bone map, size, breath colours, roar pitch,
   wing tweaks and rider seat. `setupRig(bones)` reads the bone map instead of hard-coded names.
