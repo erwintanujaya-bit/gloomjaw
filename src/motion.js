@@ -16,12 +16,12 @@ export const TUNE = {
   flySpeedMin: 1.4, flySpeedMax: 9,          // slowest / fastest flight (stick pushed 0 / 1)
   vertSpeed: 4.5, minAlt: 2.4, maxAlt: 30,   // Up/Down button speed and height limits
   // turning (radians per second, top speed of the turn)
-  turnWalk: 2.6, turnRun: 2.0, turnFly: 1.6, turnEase: 3.2,
+  turnWalk: 1.5, turnRun: 1.2, turnFly: 0.85, turnEase: 2.2,
   // jump: how fast Gloomjaw leaves the ground (units/s), gravity, wind-up crouch (s)
   jumpSpeed: 8, gravity: 15, jumpWind: 0.16,
   // running legs while flying: strides per second (slow glide, full speed), how far each leg swings,
   // how far forward the front legs reach / how far back the hind legs trail, and how much the knee folds on the way forward
-  airStrideHz: [1.5, 3.2], airSwing: 0.55, airReachFront: 0.12, airReachBack: 0.28, airFold: 0.85,
+  airStrideHz: [0.7, 1.6], airSwing: 0.55, airReachFront: 0.12, airReachBack: 0.28, airFold: 0.85,
   sprintFly: 1.6,                            // Sprint button while flying = this many times faster
 };
 
