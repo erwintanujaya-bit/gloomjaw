@@ -1,4 +1,4 @@
-import { V, k, ease, frac, lerp, clamp, wrapA } from './util.js';
+import { V, k, ease, frac, lerp, clamp, wrapA, smoothstep } from './util.js';
 import { G, S, act, input } from './state.js';
 import { pose, legIK } from './rig.js';
 import { burst } from './audio.js';
@@ -69,8 +69,16 @@ export function move(dt) {
   // it keeps turning (a circle), while the chase camera swings round behind it so the world rolls past.
   // Using the dragon's own heading (not the camera's) means the camera can never fight the steering.
   const cy = S.heading, fxC = Math.sin(cy), fzC = Math.cos(cy);
-  const wx = fxC * input.sy + -fzC * input.sx, wz = fzC * input.sy + fxC * input.sx;
-  const gait = fly ? { gait: 'fly', amount: input.mag } : stickToGait(input.mag, input.sprint);
+  // Pulling the stick DOWN never turns the dragon around: in the air it slows down and sinks to a low, slow glide
+  // (it only lands when you press Land); on the ground it stops. Steering uses at least a little "forward", so
+  // down-and-right still turns right gently.
+  const pull = clamp((-input.sy - 0.2) / 0.6, 0, 1);                 // 0 = not pulled down, 1 = pulled right down
+  const fwdW = smoothstep(-0.2, 0.3, input.sy);                       // 1 = going forward, 0 = pulled back
+  const sf = Math.max(input.sy, 0.35);
+  const wx = fxC * sf + -fzC * input.sx, wz = fzC * sf + fxC * input.sx;
+  const flyAmt = input.mag * fwdW;
+  const gait = fly ? { gait: 'fly', amount: flyAmt }
+    : pull > 0.5 ? { gait: 'idle', amount: 0 } : stickToGait(input.mag, input.sprint);
   S.sprintW += ((input.sprint ? 1 : 0) - S.sprintW) * k(dt, 3);
   S.foldW += ((S.fs === 'ground' || S.fs === 'touch' ? 1 : 0) - S.foldW) * k(dt, 3);   // wings tuck in while on the ground
   let want = (input.mag > 0.12 && gait.gait !== 'idle') ? Math.atan2(wx, wz) : null;
@@ -79,7 +87,7 @@ export function move(dt) {
   const m = S.mode;
 
   /* ---- 2. flight state machine: ground > crouch > climb > cruise > land > touch > ground ---- */
-  if (fly) S.tgtAlt = clamp(S.tgtAlt + ((input.up ? 1 : 0) - (input.down ? 1 : 0)) * TUNE.vertSpeed * dt, TUNE.minAlt, TUNE.maxAlt);
+  if (fly) S.tgtAlt = clamp(S.tgtAlt + ((input.up ? 1 : 0) - (input.down ? 1 : 0) - pull * 0.9) * TUNE.vertSpeed * dt, TUNE.minAlt, TUNE.maxAlt);   // stick down also lowers the flight height, but never below minAlt
   switch (S.fs) {
     case 'ground': if (fly) { S.fs = 'crouch'; S.ft = 0; S.tgtAlt = Math.max(S.tgtAlt, TUNE.cruiseAlt); } break;
     case 'crouch':
@@ -138,9 +146,9 @@ export function move(dt) {
     else if (m === 'run') spT = lerp(TUNE.walkSpeed * 1.2, TUNE.runSpeed, gait.amount);
     spT *= 0.35 + 0.65 * Math.max(0, Math.cos(err));  // slow down while swinging around
   } else if (S.fs === 'jwind' || S.fs === 'hop') spT = S.speed;     // keep the run-up momentum through the jump
-  else if (S.fs === 'climb') spT = Math.max(3, lerp(TUNE.flySpeedMin, TUNE.flySpeedMax, input.mag)) * lerp(1, TUNE.sprintFly, S.sprintW);
-  else if (S.fs === 'cruise') spT = lerp(TUNE.flySpeedMin, TUNE.flySpeedMax, input.mag) * lerp(1, TUNE.sprintFly, S.sprintW);
-  else if (S.fs === 'land') spT = S.alt < 1.4 ? 1.2 : Math.min(4, lerp(TUNE.flySpeedMin, TUNE.flySpeedMax, input.mag));
+  else if (S.fs === 'climb') spT = Math.max(3, lerp(TUNE.flySpeedMin, TUNE.flySpeedMax, flyAmt)) * lerp(1, TUNE.sprintFly, S.sprintW);
+  else if (S.fs === 'cruise') spT = lerp(TUNE.flySpeedMin, TUNE.flySpeedMax, flyAmt) * lerp(1, TUNE.sprintFly, S.sprintW);
+  else if (S.fs === 'land') spT = S.alt < 1.4 ? 1.2 : Math.min(4, lerp(TUNE.flySpeedMin, TUNE.flySpeedMax, flyAmt));
   S.speed += (spT - S.speed) * k(dt, S.fs === 'touch' ? 4 : 1.6);
   const fx = Math.sin(S.heading), fz = Math.cos(S.heading);
   S.pos.x += fx * S.speed * dt; S.pos.z += fz * S.speed * dt;      // the world has no edge: it is built around you as you go

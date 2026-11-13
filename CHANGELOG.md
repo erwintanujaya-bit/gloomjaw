@@ -1,5 +1,10 @@
 # Changelog
 
+## Stick down
+- Pulling the stick **down** no longer turns the dragon around. In the air it slows to the slowest flying speed and sinks to the
+  lowest flying height (`minAlt`), but keeps flying: only the Land button lands. On the ground it stops. Down-and-left/right
+  still turns gently. (`pull` and `fwdW` in `move()`, `src/motion.js`.)
+
 ## Endless world + steadier stick
 - **No more edge.** The ground is built in 64-unit tiles around you as you move (a few per frame) and dropped behind you.
   Trees, mushrooms, spikes, rocks and lava/glow pools are placed by a repeatable pattern, so the same spot always grows the
